@@ -1,0 +1,90 @@
+---
+title: "Run Mailpit with Docker Compose"
+description: "Add Mailpit to a Docker Compose project, connect your app container to it by service name, and keep messages in a volume."
+---
+
+This guide adds a `mailpit` service to a Docker Compose project and connects an app container to it.
+
+## Prerequisites
+
+- Docker with the Compose plugin (`docker compose version` prints a version).
+- An app service in a `compose.yaml` file, or use the example below.
+
+## Add the Mailpit service
+
+```yaml compose.yaml
+services:
+  mailpit:
+    image: axllent/mailpit:v1.33
+    restart: unless-stopped
+    ports:
+      - "8025:8025"   # web UI and API, open in your browser
+    volumes:
+      - mailpit-data:/data
+    environment:
+      MP_DATABASE: /data/mailpit.db   # keep messages across restarts
+      MP_MAX_MESSAGES: 5000
+
+  app:
+    build: .
+    depends_on:
+      - mailpit
+    environment:
+      SMTP_HOST: mailpit   # the service name, not localhost
+      SMTP_PORT: "1025"
+
+volumes:
+  mailpit-data:
+```
+
+Start the project:
+
+```bash
+docker compose up -d
+```
+
+Then open [http://localhost:8025](http://localhost:8025).
+
+## How the containers connect
+
+- Containers in the same Compose project reach each other by **service name**. Your app connects to `mailpit:1025`.
+- `localhost` inside the `app` container is the `app` container itself. Connecting to `localhost:1025` from there fails with `Connection refused`.
+- Port `1025` doesn't need to be published with `ports:` for other containers to use it. Publish it (`"1025:1025"`) only if programs outside Docker also send email to Mailpit.
+
+<Note>
+  These rules were tested with Docker 28: from a second container, `mailpit:1025` and `host.docker.internal:1025` worked, and `localhost:1025` returned `Connection refused`.
+</Note>
+
+## Reach Mailpit on your machine from a container
+
+If Mailpit runs on your machine outside Docker, containers can reach it at `host.docker.internal:1025`. Docker Desktop on macOS and Windows provides this name automatically. On Linux, add it to the app service:
+
+```yaml
+  app:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+```
+
+## Wait for Mailpit before running tests
+
+To make the app wait until Mailpit is ready, add a health check and a `depends_on` condition:
+
+```yaml
+  mailpit:
+    image: axllent/mailpit:v1.33
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    depends_on:
+      mailpit:
+        condition: service_healthy
+```
+
+## Related pages
+
+- [Keep messages after a restart](/guides/keep-messages-after-restart)
+- [Fix "connection refused" when sending to Mailpit](/troubleshooting/cant-connect-to-smtp)

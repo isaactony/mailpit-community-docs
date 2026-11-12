@@ -1,0 +1,98 @@
+---
+title: "Run Mailpit behind a reverse proxy"
+description: "Serve Mailpit through nginx, Apache, or Caddy, at the root or under a sub-path, with the Host header and websocket settings that keep it working."
+---
+
+Put Mailpit behind your existing web server to give it a domain name, HTTPS, or a path such as `/mailpit/`.
+
+## Prerequisites
+
+- nginx, Apache (with the `rewrite`, `proxy`, `proxy_http`, and `proxy_wstunnel` modules), or Caddy.
+- The address your proxy uses to reach Mailpit. These examples use `127.0.0.1:8025`.
+
+## Three rules every proxy must follow
+
+1. **Keep the original `Host` header.** Since v1.29.0, Mailpit rejects API and websocket requests whose `Origin` doesn't match the host. A proxy that changes `Host` causes `403` errors.
+2. **Proxy websockets.** The web UI updates live over `/api/events`. Without websocket support, new messages only appear after a page refresh.
+3. **Match the path.** To serve Mailpit under a sub-path, start Mailpit with the same path: `--webroot /mailpit/` (`MP_WEBROOT`). Include the trailing slash.
+
+## Proxy configuration
+
+<Tabs>
+  <Tab title="nginx">
+    ```nginx
+    server {
+        listen 80;
+        server_name mail.example.com;
+
+        location / {
+            proxy_pass http://127.0.0.1:8025;
+            proxy_set_header Host $http_host;   # keep the original Host header
+
+            # websocket support
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+        }
+    }
+    ```
+
+    For a sub-path, change `location /` to `location /mailpit/` and start Mailpit with `--webroot /mailpit/`. Keep `proxy_pass` without a trailing path, so the `/mailpit/` prefix reaches Mailpit. This sub-path setup was tested with nginx and Mailpit v1.33.1.
+  </Tab>
+  <Tab title="Apache">
+    ```apache
+    <VirtualHost *:80>
+        ServerName mail.example.com
+        ProxyPreserveHost On
+
+        ProxyPass "/" "http://127.0.0.1:8025/"
+        ProxyPassReverse "/" "http://127.0.0.1:8025/"
+
+        RewriteEngine on
+        RewriteCond %{HTTP:Upgrade} websocket [NC]
+        RewriteCond %{HTTP:Connection} upgrade [NC]
+        RewriteRule ^/?(.*) "ws://127.0.0.1:8025/$1" [P,L]
+    </VirtualHost>
+    ```
+  </Tab>
+  <Tab title="Caddy">
+    At the root of a domain:
+
+    ```text Caddyfile
+    mail.example.com {
+        reverse_proxy 127.0.0.1:8025 {
+            header_up Host {host}
+        }
+    }
+    ```
+
+    Under `/mailpit/`, with Mailpit started using `--webroot /mailpit/`:
+
+    ```text Caddyfile
+    example.com {
+        redir /mailpit /mailpit/
+        handle_path /mailpit/* {
+            rewrite * /mailpit{path}
+            reverse_proxy 127.0.0.1:8025 {
+                header_up Host {host}
+            }
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+For Traefik and IIS, the official docs link to community configurations in [issue #286](https://github.com/axllent/mailpit/issues/286) and [issue #131](https://github.com/axllent/mailpit/issues/131#issuecomment-1641054844).
+
+## Check that it works
+
+1. Open Mailpit through the proxy. The inbox loads with styles.
+2. Send a test email. It appears without a page refresh, which confirms websockets work.
+3. Delete a message. It disappears without an error, which confirms the `Host` header is preserved.
+
+If any step fails, see [Fix a blank page or 403 errors behind a reverse proxy](/troubleshooting/blank-page-or-403-behind-proxy).
+
+## Related pages
+
+- [Protect Mailpit with a password and HTTPS](/guides/protect-with-password-and-https)
+- [Security and network exposure](/concepts/security)

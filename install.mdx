@@ -1,0 +1,88 @@
+---
+title: "Install Mailpit"
+description: "Install Mailpit as a single binary with Homebrew, the install script, or Docker on macOS, Linux, or Windows, then check that it's running."
+---
+
+Mailpit is a single binary with no dependencies. It runs on macOS, Linux, Windows, and FreeBSD, and as a Docker image for `amd64` and `arm64`.
+
+## Prerequisites
+
+- Ports `1025` (SMTP) and `8025` (web UI and API) free, or choose other ports with [`--smtp` and `--listen`](/reference/runtime-options#network-and-ports).
+
+## Install Mailpit
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    brew install mailpit
+    ```
+
+    To run Mailpit in the background and start it again at login:
+
+    ```bash
+    brew services start mailpit
+    ```
+  </Tab>
+  <Tab title="Linux and macOS (script)">
+    The install script puts the binary in `/usr/local/bin/mailpit`:
+
+    ```bash
+    sudo sh < <(curl -sL https://raw.githubusercontent.com/axllent/mailpit/develop/install.sh)
+    ```
+
+    Arch Linux users can install `mailpit` from the AUR, and FreeBSD users can run `pkg install mailpit`.
+  </Tab>
+  <Tab title="Docker">
+    ```bash
+    docker run -d --name mailpit --restart unless-stopped \
+      -p 8025:8025 -p 1025:1025 \
+      axllent/mailpit
+    ```
+
+    Use `axllent/mailpit:latest` for the newest release, or pin a version such as `axllent/mailpit:v1.33`. The `edge` tag contains unreleased changes. The same images are mirrored at `ghcr.io/axllent/mailpit`.
+  </Tab>
+  <Tab title="Windows">
+    Download the Windows archive from the [Mailpit releases page](https://github.com/axllent/mailpit/releases/latest), extract `mailpit.exe`, and run it from a terminal:
+
+    ```powershell
+    .\mailpit.exe
+    ```
+  </Tab>
+</Tabs>
+
+## Check that Mailpit is running
+
+```bash
+mailpit version
+mailpit readyz && echo "Mailpit is ready"
+```
+
+`mailpit readyz` exits with code `0` when it can reach a running Mailpit and `1` when it can't. You can also open [http://localhost:8025](http://localhost:8025) in a browser.
+
+## Run Mailpit as a service on Linux
+
+To start Mailpit when the machine boots, create a systemd unit. Replace `/var/lib/mailpit/mailpit.db` with where you want to store messages:
+
+```ini /etc/systemd/system/mailpit.service
+[Unit]
+Description=Mailpit email testing server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/mailpit --database /var/lib/mailpit/mailpit.db
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo mkdir -p /var/lib/mailpit
+sudo systemctl daemon-reload
+sudo systemctl enable --now mailpit
+```
+
+## Next steps
+
+- [Quickstart: catch your first email](/quickstart)
+- [Runtime options](/reference/runtime-options): every flag and environment variable.

@@ -1,0 +1,75 @@
+---
+title: "Keep messages after a restart"
+description: "Stop losing captured email when Mailpit or its container restarts by setting a database file with --database or MP_DATABASE."
+---
+
+By default, Mailpit deletes all messages when it stops, because it uses a temporary database. To keep messages, give Mailpit a database file on persistent storage.
+
+## Prerequisites
+
+- Write access to a directory on a local disk. Network file systems need extra settings. See [Store the database on a local disk](/concepts/message-storage#store-the-database-on-a-local-disk).
+
+## Set a database file
+
+<Tabs>
+  <Tab title="Binary">
+    ```bash
+    mailpit --database ~/mailpit/mailpit.db
+    ```
+
+    Or set the environment variable `MP_DATABASE=~/mailpit/mailpit.db`.
+  </Tab>
+  <Tab title="Docker">
+    Mount a directory and point `MP_DATABASE` at a file inside it:
+
+    ```bash
+    docker run -d --name mailpit \
+      -p 8025:8025 -p 1025:1025 \
+      -v mailpit-data:/data \
+      -e MP_DATABASE=/data/mailpit.db \
+      axllent/mailpit
+    ```
+  </Tab>
+  <Tab title="Docker Compose">
+    ```yaml compose.yaml
+    services:
+      mailpit:
+        image: axllent/mailpit:v1.33
+        ports:
+          - "8025:8025"
+          - "1025:1025"
+        volumes:
+          - mailpit-data:/data
+        environment:
+          MP_DATABASE: /data/mailpit.db
+
+    volumes:
+      mailpit-data:
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  With Docker, setting `MP_DATABASE` isn't enough on its own. Without a volume, the file lives in the container and is deleted when the container is recreated.
+</Warning>
+
+## Check that messages survive a restart
+
+1. Send a test email. See [Quickstart](/quickstart#send-a-test-email).
+2. Restart Mailpit, or recreate the container with `docker compose up -d --force-recreate mailpit`.
+3. Open [http://localhost:8025](http://localhost:8025). The message is still in the inbox.
+
+## Control how many messages you keep
+
+A persistent database still keeps only the newest 500 messages by default. Raise the limit with `--max 5000` (`MP_MAX_MESSAGES=5000`), remove it with `--max 0`, or delete by age with `--max-age 14d`. See [Message storage and limits](/concepts/message-storage#old-messages-are-pruned-automatically).
+
+## If messages still disappear
+
+- **Check the variable name.** Mailpit ignores unknown environment variables without any warning, so a typo such as `MP_DATABSE` silently falls back to temporary storage.
+- **Check the log.** At startup, an old `MP_DATA_FILE` variable logs a deprecation warning. It still works in v1.33, but rename it to `MP_DATABASE`.
+- **Check the message limit.** Old messages are pruned once you pass `MP_MAX_MESSAGES`.
+
+## Related pages
+
+- [Message storage and limits](/concepts/message-storage)
+- [Run Mailpit with Docker Compose](/guides/docker-compose)

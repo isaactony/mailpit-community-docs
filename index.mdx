@@ -1,0 +1,52 @@
+---
+title: "What Mailpit does"
+description: "Mailpit is a free, open-source fake SMTP server with a web UI and API, so you can catch and inspect every email your app sends during development and testing."
+---
+
+Mailpit is an email testing tool for developers. Point your app's SMTP settings at Mailpit, and every email the app sends lands in Mailpit's inbox instead of a real person's. You can then read each email in a web UI, or check it in automated tests through the REST API.
+
+<Note>
+  These are unofficial community docs for Mailpit v1.33. They aren't affiliated with the Mailpit project. The official docs are at [mailpit.axllent.org](https://mailpit.axllent.org/docs/). See [About these docs](/resources/about-these-docs).
+</Note>
+
+## Use Mailpit when you need to
+
+- Send email from an app on your machine without emailing real users.
+- See exactly what an email looks like: HTML, plain text, headers, attachments, and raw source.
+- Assert in automated tests that an email was sent, with the right recipient and content.
+- Test how your app handles SMTP errors.
+
+## How Mailpit fits into your setup
+
+```text
+Your app ──SMTP :1025──▶ Mailpit ──▶ Web UI   http://localhost:8025
+                                 └─▶ REST API http://localhost:8025/api/v1
+```
+
+| Default | Value |
+| :-- | :-- |
+| SMTP port your app sends to | `1025` |
+| Web UI and API address | `http://localhost:8025` |
+| SMTP authentication | Off |
+| TLS encryption | Off |
+| Storage | Temporary. Messages are deleted when Mailpit stops. |
+| Messages kept | The newest 500 |
+
+Mailpit never delivers email to real recipients unless you explicitly configure a relay. For more on the moving parts, see [How Mailpit captures email](/concepts/how-mailpit-works).
+
+## Start here
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Catch your first email in about five minutes.
+  </Card>
+  <Card title="Send email from your app" icon="code" href="/guides/send-email-from-your-app">
+    SMTP settings for Laravel, Django, Rails, Node.js, Spring, and more.
+  </Card>
+  <Card title="Assert email in tests" icon="flask-conical" href="/guides/assert-email-in-tests">
+    Check sign-up and password-reset emails in automated tests.
+  </Card>
+  <Card title="Can't connect to Mailpit?" icon="plug-zap" href="/troubleshooting/cant-connect-to-smtp">
+    Fix "connection refused", including the Docker `localhost` trap.
+  </Card>
+</CardGroup>

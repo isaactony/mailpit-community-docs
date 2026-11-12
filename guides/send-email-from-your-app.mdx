@@ -1,0 +1,145 @@
+---
+title: "Send email from your app to Mailpit"
+description: "SMTP settings for Laravel, Symfony, Django, Rails, Node.js Nodemailer, Spring Boot, and PHP sendmail so your app's email lands in Mailpit."
+---
+
+To send your app's email to Mailpit, change its SMTP settings to Mailpit's host and port, with no username, password, or encryption.
+
+## Prerequisites
+
+- Mailpit running. See [Quickstart](/quickstart).
+- The right SMTP host for where your app runs:
+
+| Your app runs | Mailpit runs | SMTP host and port |
+| :-- | :-- | :-- |
+| On your machine | On your machine or in Docker with `-p 1025:1025` | `localhost:1025` |
+| In a Docker Compose service | In the same Compose project | `mailpit:1025` (the service name) |
+| In a Docker container | On your machine, outside Docker | `host.docker.internal:1025` |
+
+<Warning>
+  Inside a container, `localhost` means the container itself, not your machine. Using `localhost:1025` from a container fails with **Connection refused**. See [Fix "connection refused"](/troubleshooting/cant-connect-to-smtp).
+</Warning>
+
+## Configure your framework
+
+Each example uses `localhost`. Replace it with the host from the table above.
+
+<Tabs>
+  <Tab title="Laravel">
+    ```bash .env
+    MAIL_MAILER=smtp
+    MAIL_HOST=localhost   # use mailpit (the service name) in Docker Compose
+    MAIL_PORT=1025
+    MAIL_USERNAME=null
+    MAIL_PASSWORD=null
+    ```
+
+    Clear cached config after changing `.env`: `php artisan config:clear`.
+  </Tab>
+  <Tab title="Symfony">
+    ```bash .env.local
+    MAILER_DSN=smtp://localhost:1025
+    ```
+  </Tab>
+  <Tab title="Django">
+    ```python settings.py
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = "localhost"
+    EMAIL_PORT = 1025
+    EMAIL_USE_TLS = False
+    EMAIL_USE_SSL = False
+    ```
+  </Tab>
+  <Tab title="Rails">
+    ```ruby config/environments/development.rb
+    config.action_mailer.delivery_method = :smtp
+    config.action_mailer.smtp_settings = { address: "localhost", port: 1025 }
+    ```
+  </Tab>
+  <Tab title="Node.js">
+    ```javascript send.js
+    const nodemailer = require("nodemailer");
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "localhost",
+      port: Number(process.env.SMTP_PORT || 1025),
+      secure: false, // Mailpit doesn't use TLS by default
+    });
+
+    transporter
+      .sendMail({
+        from: "App <noreply@example.com>",
+        to: "ada@example.com",
+        subject: "Welcome to the app",
+        text: "Thanks for signing up.",
+        html: "<p>Thanks for signing up.</p>",
+      })
+      .then((info) => console.log("Sent:", info.messageId))
+      .catch((err) => {
+        console.error("Send failed:", err.message);
+        process.exit(1);
+      });
+    ```
+
+    Install the dependency with `npm install nodemailer`, then run `node send.js`.
+  </Tab>
+  <Tab title="Python">
+    ```python send.py
+    import os
+    import smtplib
+    from email.message import EmailMessage
+
+    msg = EmailMessage()
+    msg["From"] = "App <noreply@example.com>"
+    msg["To"] = "ada@example.com"
+    msg["Subject"] = "Welcome to the app"
+    msg.set_content("Thanks for signing up.")
+    msg.add_alternative("<p>Thanks for signing up.</p>", subtype="html")
+
+    host = os.environ.get("SMTP_HOST", "localhost")
+    port = int(os.environ.get("SMTP_PORT", "1025"))
+
+    # Mailpit accepts plain SMTP with no login by default.
+    with smtplib.SMTP(host, port) as smtp:
+        smtp.send_message(msg)
+    print("Sent")
+    ```
+  </Tab>
+  <Tab title="Spring Boot">
+    ```properties application.properties
+    spring.mail.host=localhost
+    spring.mail.port=1025
+    spring.mail.properties.mail.smtp.auth=false
+    spring.mail.properties.mail.smtp.starttls.enable=false
+    ```
+  </Tab>
+  <Tab title="PHP mail()">
+    PHP's `mail()` function uses a `sendmail` binary. Point it at Mailpit's own `sendmail` command in `php.ini`:
+
+    ```ini php.ini
+    sendmail_path = "/usr/local/bin/mailpit sendmail -S localhost:1025"
+    ```
+
+    See [mailpit sendmail](/reference/commands#mailpit-sendmail) for the options.
+  </Tab>
+</Tabs>
+
+## Check that it worked
+
+1. Trigger an email in your app, for example by signing up a test user.
+2. Open [http://localhost:8025](http://localhost:8025) and check that the message is at the top of the inbox.
+
+Or check from a terminal:
+
+```bash
+curl -s http://localhost:8025/api/v1/message/latest | python3 -c "import json,sys; print(json.load(sys.stdin)['Subject'])"
+```
+
+## If Mailpit requires a login
+
+When Mailpit runs with `--smtp-auth-file`, set your framework's username and password settings, and turn on STARTTLS if Mailpit has a certificate. For testing, `--smtp-auth-accept-any` makes Mailpit accept any username and password. See [Fix SMTP authentication and TLS errors](/troubleshooting/smtp-auth-and-tls-errors).
+
+## Related pages
+
+- [Run Mailpit with Docker Compose](/guides/docker-compose)
+- [Fix "connection refused" when sending to Mailpit](/troubleshooting/cant-connect-to-smtp)

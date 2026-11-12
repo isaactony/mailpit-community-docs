@@ -1,0 +1,63 @@
+---
+title: "Websocket events"
+description: "Listen to Mailpit's /api/events websocket to react to new messages instantly instead of polling, with a complete Node.js example."
+---
+
+Mailpit streams events over a websocket at `/api/events`. The web UI uses it to update live. You can use it to react to new messages without polling the API.
+
+<Note>
+  The official docs say the websocket isn't part of the official API, so its data can change between releases. Only the `new` event type is described here, because it's the least likely to change.
+</Note>
+
+## Prerequisites
+
+- Node.js 22 or later, which includes a built-in `WebSocket`, for the example below.
+- If your code runs in a browser on another origin, Mailpit started with `--api-cors` for that origin.
+
+## Event format
+
+Every event is a JSON object with a `Type` and `Data`:
+
+```json
+{
+  "Type": "new",
+  "Data": {
+    "ID": "YsABjkFERuPyq8XC6WaKs2",
+    "Subject": "Welcome to the app",
+    "From": {"Name": "App", "Address": "noreply@example.com"},
+    "To": [{"Name": "", "Address": "ada@example.com"}],
+    "Tags": [],
+    "Snippet": "Thanks for signing up."
+  }
+}
+```
+
+`Type` can be `new`, `stats`, `update`, or `delete`. For `new`, `Data` is the message summary, the same object the webhook sends. Some fields are left out above.
+
+## Listen for new messages
+
+```javascript watch.js
+// Run with: node watch.js  (Node.js 22+)
+const ws = new WebSocket("ws://localhost:8025/api/events");
+
+ws.addEventListener("open", () => console.log("Connected. Waiting for email…"));
+
+ws.addEventListener("message", (event) => {
+  const { Type, Data } = JSON.parse(event.data);
+  if (Type !== "new") return; // ignore stats, update, and delete events
+  console.log(`New email: "${Data.Subject}" to ${Data.To.map((t) => t.Address).join(", ")}`);
+});
+
+ws.addEventListener("close", () => console.log("Disconnected"));
+```
+
+Run it, then send an email. The script prints one line per new message.
+
+## Websockets behind a reverse proxy
+
+The proxy must forward websocket upgrades and keep the original `Host` header. See [Run Mailpit behind a reverse proxy](/guides/reverse-proxy).
+
+## Related pages
+
+- [Get a webhook for each new message](/guides/webhooks)
+- [API overview](/api-reference/overview)

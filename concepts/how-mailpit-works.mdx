@@ -1,0 +1,60 @@
+---
+title: "How Mailpit captures email"
+description: "How Mailpit's SMTP server, storage, web UI, and API fit together, which ports each part uses, and why email never reaches real inboxes."
+---
+
+Mailpit has three parts: an SMTP server that receives email, a database that stores it, and an HTTP server for the web UI and REST API.
+
+```text
+             ┌──────────── Mailpit ────────────┐
+Your app ──▶ │ SMTP server  :1025               │
+             │      │                           │
+             │      ▼                           │
+             │ Database (SQLite)                │
+             │      │                           │
+             │      ▼                           │
+Browser ───▶ │ HTTP server  :8025  web UI + API │ ◀── Tests, scripts
+             └──────────────────────────────────┘
+```
+
+## The SMTP server receives email
+
+Your app connects to Mailpit the same way it connects to any mail server, over SMTP. Mailpit accepts the message, stores it, and replies with success. It doesn't deliver the message anywhere, so test emails can't reach real inboxes.
+
+By default, the SMTP server:
+
+- Listens on port `1025` on every network interface.
+- Doesn't require a username or password.
+- Doesn't use TLS. You can add STARTTLS or TLS. See [Protect Mailpit with a password and HTTPS](/guides/protect-with-password-and-https).
+- Rejects messages larger than 50 MB and messages with more than 100 recipients.
+
+Mailpit can also accept email from the `sendmail` command and from the HTTP [Send API](/guides/send-with-the-http-api).
+
+## The database stores messages
+
+Every message is stored in a SQLite database, compressed. The database is temporary by default and deleted when Mailpit stops. Mailpit keeps the newest 500 messages and deletes older ones automatically. See [Message storage and limits](/concepts/message-storage).
+
+## The HTTP server shows the web UI and the API
+
+The web UI and the REST API share one address, `http://localhost:8025` by default.
+
+| Path | What it serves |
+| :-- | :-- |
+| `/` | The web UI |
+| `/api/v1/` | The REST API. See the [API overview](/api-reference/overview). |
+| `/api/events` | A websocket that streams new messages. See [Websocket events](/api-reference/websocket-events). |
+| `/view/<ID>.html` and `/view/<ID>.txt` | The HTML or text part of one message, for embedding in tests or screenshots |
+| `/readyz` | A health check that returns `200` when Mailpit is ready |
+
+## Mailpit sends email only when you configure it to
+
+Mailpit has two features that send real email, and both are off until you configure them:
+
+- **Release** sends a stored message to an address you choose, through an SMTP relay you configure. See [Release messages to a real SMTP server](/guides/release-to-a-real-smtp-server).
+- **Forwarding** sends a copy of every incoming message to fixed addresses.
+
+## Related pages
+
+- [Message storage and limits](/concepts/message-storage)
+- [Security and network exposure](/concepts/security)
+- [Glossary](/resources/glossary)

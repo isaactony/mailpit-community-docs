@@ -1,0 +1,63 @@
+---
+title: "Get a webhook for each new message"
+description: "Make Mailpit POST a JSON message summary to your URL whenever an email arrives, and understand the rate limit that skips webhooks during bursts."
+---
+
+Mailpit can call a URL each time it receives a message. Use it to trigger a workflow in a tool such as n8n, or to notify a chat channel.
+
+## Prerequisites
+
+- An HTTP endpoint that accepts `POST` requests with a JSON body, reachable from where Mailpit runs.
+
+## Set the webhook URL
+
+```bash
+mailpit --webhook-url https://hooks.example.com/mailpit
+```
+
+Or set `MP_WEBHOOK_URL`. For basic authentication, put the credentials in the URL: `https://user:password@hooks.example.com/mailpit`.
+
+## What Mailpit sends
+
+A `POST` with `Content-Type: application/json`, a `User-Agent` of `Mailpit/<version>`, and the message summary as the body:
+
+```json
+{
+  "ID": "30qU0iTtS42i1HwdwEWX9p",
+  "MessageID": "3AjhxyjNcOqSpflsTTPQU4@mailpit",
+  "Read": false,
+  "From": {"Name": "App", "Address": "noreply@example.com"},
+  "To": [{"Name": "", "Address": "ada+billing@example.com"}],
+  "Cc": [],
+  "Bcc": [],
+  "ReplyTo": [],
+  "Subject": "Your invoice #1042",
+  "Created": "2026-11-12T08:13:54.961911+03:00",
+  "Username": "",
+  "Tags": ["billing", "invoice"],
+  "Size": 901,
+  "Attachments": 0,
+  "Snippet": "Hello reset"
+}
+```
+
+The body doesn't include the full message. Fetch it with `GET /api/v1/message/<ID>`. If you set `--label`, Mailpit also sends a `Mailpit-Label` header.
+
+## Webhooks are rate-limited and not retried
+
+<Warning>
+  By default, Mailpit sends at most one webhook per second. Messages that arrive while the limit is active are **skipped, not queued**, and failed webhook calls aren't retried. In testing, two emails sent in the same second produced only one webhook.
+</Warning>
+
+| Goal | Option |
+| :-- | :-- |
+| Allow at most one webhook every N seconds | `--webhook-limit N` (`MP_WEBHOOK_LIMIT`). The default is `1`. |
+| Send a webhook for every message | `--webhook-limit 0` |
+| Wait before each webhook | `--webhook-delay <seconds>` (`MP_WEBHOOK_DELAY`) |
+
+If you need every message, use `--webhook-limit 0`, or listen to the [websocket](/api-reference/websocket-events) instead.
+
+## Related pages
+
+- [Websocket events](/api-reference/websocket-events)
+- [Runtime options](/reference/runtime-options#integrations)

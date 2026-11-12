@@ -1,0 +1,25 @@
+---
+title: "About these docs"
+description: "Who wrote these unofficial Mailpit docs, which Mailpit version they cover, how every example was tested, and how they relate to the official documentation."
+---
+
+These are **unofficial, community-written docs** for [Mailpit](https://github.com/axllent/mailpit). They aren't affiliated with or endorsed by the Mailpit project or its maintainer. For authoritative information, see the [official Mailpit documentation](https://mailpit.axllent.org/docs/).
+
+## Version covered
+
+These docs describe **Mailpit v1.33.1**. Options and behavior can change in later releases. Run `mailpit --help` to check the options for your version.
+
+## How the content was checked
+
+- Every command, configuration option, and API call was run against Mailpit v1.33.1 on macOS and in Docker 28.
+- The Node.js and Python test examples run in this site's GitHub Actions workflow against the `axllent/mailpit:v1.33` image.
+- Docker networking (`localhost`, service names, and `host.docker.internal`) and the nginx reverse-proxy setup were tested with real containers.
+- Pages note the places where tested behavior differs from what you might expect, such as the webhook rate limit and the `to:` search filter.
+
+## Sources and license
+
+The facts in these docs come from the official Mailpit documentation and source code, both published under the MIT license, from Mailpit's GitHub issues, and from testing. The text is written independently. The API reference is generated from Mailpit's own Swagger file, converted to OpenAPI 3.
+
+## Get help with Mailpit
+
+For bugs and questions about Mailpit itself, use [Mailpit's GitHub issues](https://github.com/axllent/mailpit/issues). For mistakes in these docs, open an issue on [the docs repository](https://github.com/isaactony/mailpit-community-docs).

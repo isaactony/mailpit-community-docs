@@ -1,0 +1,70 @@
+---
+title: "Tags and automatic tagging"
+description: "How Mailpit tags messages automatically from plus-addresses, X-Tags headers, and match rules, and how to use tags to filter the inbox and tests."
+---
+
+A **tag** is a label on a message, such as `billing` or `staging`. Tags let you filter the inbox in the web UI, and search with `tag:<name>` in the UI or the API.
+
+## Four ways messages get tagged
+
+| Source | Example | Result | On by default |
+| :-- | :-- | :-- | :-- |
+| Plus-address in From, To, Cc, or Bcc | `ada+billing@example.com` | `billing` | Yes |
+| `X-Tags` header | `X-Tags: signup, staging` | `signup` and `staging` | Yes |
+| Match rules | `--tag "invoice=subject:invoice"` | `invoice` on matching messages | No |
+| Authenticated username | SMTP login `alice` with `--tags-username` | `alice` | No |
+
+You can also add, rename, and delete tags in the web UI, or with the [Tags API](/api-reference/overview).
+
+### Plus-addresses
+
+Mailpit reads the part after `+` in any address. `user+debug@example.com` gets the tag `debug`. For several tags, use `user+tag1+tag2@example.com`.
+
+Plus-addressing is the simplest way to separate test runs: send each test's email to `user+<test-name>@example.com`, then search for `tag:<test-name>`.
+
+### X-Tags header
+
+Add an `X-Tags` header with a comma-separated list to tag a message from your app's code:
+
+```text
+X-Tags: signup, staging
+```
+
+### Match rules
+
+Match rules tag new messages that match a search. Set them with `--tag` (`MP_TAG`) in the form `<tag>=<match>`, separated by spaces:
+
+```bash
+mailpit --tag 'invoice=subject:invoice internal=from:@example.com'
+```
+
+For many rules, use a YAML file with `--tags-config` (`MP_TAGS_CONFIG`):
+
+```yaml tags.yaml
+filters:
+  - match: subject:invoice
+    tags: invoice
+  - match: from:noreply@example.com
+    tags: Automated, App
+  - match: '"order confirmation"'
+    tags: Orders
+```
+
+A rule with several words matches all of them in any order. Quote the phrase, as in the last rule, for an exact match. Rules use the [search filter syntax](/reference/search-filters), except `tag:`, `is:tagged`, and `is:read`.
+
+## Tag name rules
+
+Tag names can contain letters, numbers, spaces, and the characters `-`, `.`, `_`, and `@`, and must be 1 to 100 characters long.
+
+## Turn automatic tagging on or off
+
+| Goal | Option |
+| :-- | :-- |
+| Turn off plus-address or X-Tags tagging | `--tags-disable plus-addresses,x-tags` (`MP_TAGS_DISABLE`) |
+| Capitalize new automatic tags | `--tags-title-case` (`MP_TAGS_TITLE_CASE=true`) |
+| Tag messages with the SMTP or HTTP username | `--tags-username` (`MP_TAGS_USERNAME=true`) |
+
+## Related pages
+
+- [Search filter syntax](/reference/search-filters)
+- [Assert email content in automated tests](/guides/assert-email-in-tests)

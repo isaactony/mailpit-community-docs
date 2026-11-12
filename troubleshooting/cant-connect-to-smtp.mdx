@@ -1,0 +1,81 @@
+---
+title: "Fix \"connection refused\" when sending to Mailpit"
+description: "Fix Connection refused, ECONNREFUSED, or timeouts when your app sends to Mailpit on port 1025, including the Docker localhost mistake and PHP sendmail in containers."
+---
+
+Your app reports an error like one of these when it sends email:
+
+```text
+ConnectionRefusedError: [Errno 111] Connection refused
+Error: connect ECONNREFUSED 127.0.0.1:1025
+Connection could not be established with host "localhost:1025"
+```
+
+Nothing is accepting connections at the host and port your app uses. Work through these causes in order.
+
+## Your app runs in a container and uses localhost
+
+**This is the most common cause.** Inside a Docker container, `localhost` is the container itself, not your machine or the Mailpit container.
+
+| Mailpit runs | Use this SMTP host from a container |
+| :-- | :-- |
+| In the same Docker Compose project | The service name, such as `mailpit` |
+| On your machine, outside Docker | `host.docker.internal`. On Linux, also add `extra_hosts: ["host.docker.internal:host-gateway"]` to the app service. |
+
+Tested with Docker 28: from an app container, `mailpit:1025` and `host.docker.internal:1025` delivered, and `localhost:1025` returned `Connection refused`. See [Run Mailpit with Docker Compose](/guides/docker-compose).
+
+Change the host setting in your framework, and keep port `1025`:
+
+| Framework | Setting | Value in Docker Compose |
+| :-- | :-- | :-- |
+| Laravel | `MAIL_HOST` in `.env` | `MAIL_HOST=mailpit` |
+| Symfony | `MAILER_DSN` | `MAILER_DSN=smtp://mailpit:1025` |
+| Django | `EMAIL_HOST` in `settings.py` | `EMAIL_HOST = "mailpit"` |
+| Rails | `address` in `smtp_settings` | `address: "mailpit"` |
+| Node.js Nodemailer | `host` in `createTransport` | `host: "mailpit"` |
+| Spring Boot | `spring.mail.host` | `spring.mail.host=mailpit` |
+
+For the full settings, see [Send email from your app](/guides/send-email-from-your-app).
+
+## Mailpit isn't running
+
+Check from the machine or container where your app runs:
+
+```bash
+mailpit readyz && echo "Mailpit is running"
+```
+
+Or open [http://localhost:8025](http://localhost:8025). With Docker, check the container with `docker ps --filter name=mailpit` and read the log with `docker logs mailpit`.
+
+## The port isn't published
+
+If Mailpit runs in Docker and your app runs on your machine, publish the SMTP port: `-p 1025:1025` with `docker run`, or `"1025:1025"` under `ports:` in Compose.
+
+## Mailpit listens on a different port or interface
+
+Mailpit's log shows the SMTP address at startup:
+
+```text
+[smtpd] starting on [::]:1025 (no encryption)
+```
+
+If it shows a different port, or `127.0.0.1` while your app connects from another machine or container, change `--smtp` (`MP_SMTP_BIND_ADDR`) or your app's settings to match.
+
+## Your app expects TLS or a login
+
+If your app connects but then fails with a TLS or authentication error, the connection works and the settings don't match. Turn off encryption and authentication in your app's mail settings. See [Fix SMTP authentication and TLS errors](/troubleshooting/smtp-auth-and-tls-errors).
+
+## PHP sendmail in a container sends nothing
+
+With PHP's `mail()` in Alpine-based images, the BusyBox `sendmail` can produce messages that never arrive and no error. Point PHP at Mailpit's own sendmail command, or tell BusyBox's sendmail where Mailpit is:
+
+```ini php.ini
+sendmail_path = "/usr/sbin/sendmail -S mailpit:1025 -t"
+```
+
+If messages still don't appear, see the BusyBox line-ending workaround in [issue #153](https://github.com/axllent/mailpit/issues/153).
+
+## Related pages
+
+- [Send email from your app](/guides/send-email-from-your-app)
+- [Fix emails that don't appear in Mailpit](/troubleshooting/emails-dont-appear)

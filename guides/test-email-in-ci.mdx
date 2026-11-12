@@ -1,0 +1,90 @@
+---
+title: "Test email in CI with GitHub Actions"
+description: "Run Mailpit as a GitHub Actions service container, wait until it's ready, and run email tests against it in every pull request."
+---
+
+Run Mailpit next to your test job so email tests work in CI the same way they do on your machine.
+
+## Prerequisites
+
+- A GitHub repository with Actions enabled.
+- Email tests that use SMTP on `localhost:1025` and the API on `http://localhost:8025`. See [Assert email content in automated tests](/guides/assert-email-in-tests).
+
+## Add the workflow
+
+<Steps>
+  <Step title="Add Mailpit as a service container">
+    Save this file as `.github/workflows/email-tests.yml`. It's the workflow that runs this site's own example tests.
+
+    ```yaml .github/workflows/email-tests.yml
+    name: Email tests
+
+    on:
+      push:
+      pull_request:
+
+    jobs:
+      email-tests:
+        runs-on: ubuntu-latest
+        services:
+          mailpit:
+            image: axllent/mailpit:v1.33
+            ports:
+              - 1025:1025
+              - 8025:8025
+        steps:
+          - uses: actions/checkout@v4
+
+          - uses: actions/setup-node@v4
+            with:
+              node-version: 20
+
+          - name: Wait for Mailpit
+            run: |
+              for i in $(seq 1 30); do
+                curl -sf http://localhost:8025/readyz && break
+                sleep 1
+              done
+
+          - name: Run email tests
+            run: |
+              npm ci
+              npm test
+    ```
+
+    Replace the last step with your project's test command.
+  </Step>
+
+  <Step title="Push and check the run">
+    Push a commit and open the **Actions** tab. The **Run email tests** step passes when your tests find the expected emails in Mailpit.
+  </Step>
+</Steps>
+
+## How the service container works
+
+- GitHub starts the `mailpit` container before the job's steps and stops it afterwards, so every run starts with an empty inbox.
+- Because the job runs directly on the runner, the `ports` mapping makes Mailpit available at `localhost:1025` and `localhost:8025`.
+- If your job itself runs in a container (`container:` in the job), connect to `mailpit:1025` and `http://mailpit:8025` instead.
+- Pin a version, such as `axllent/mailpit:v1.33`, so a new Mailpit release can't change your CI behavior without you noticing.
+
+## Test SMTP failure handling in CI
+
+To check that your app handles a rejected email, start Mailpit with [Chaos](/guides/simulate-smtp-failures). Service containers can't take command-line flags, so use the environment variable:
+
+```yaml
+        services:
+          mailpit:
+            image: axllent/mailpit:v1.33
+            ports:
+              - 1025:1025
+              - 8025:8025
+            env:
+              MP_ENABLE_CHAOS: "true"
+```
+
+Your tests can then turn errors on and off with `PUT /api/v1/chaos`.
+
+## Related pages
+
+- [Assert email content in automated tests](/guides/assert-email-in-tests)
+- [Simulate SMTP failures with Chaos](/guides/simulate-smtp-failures)

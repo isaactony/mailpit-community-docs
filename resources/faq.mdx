@@ -1,0 +1,58 @@
+---
+title: "Mailpit FAQ"
+description: "Short answers to common Mailpit questions about MailHog, real delivery, persistence, multiple projects, production use, licensing, and POP3."
+---
+
+<AccordionGroup>
+  <Accordion title="Is Mailpit a replacement for MailHog?">
+    Yes. Mailpit was inspired by MailHog, which is no longer maintained, and uses the same default ports: `1025` for SMTP and `8025` for the web UI. Apps configured for MailHog usually work with Mailpit without changes. Mailpit's API is different from MailHog's, so update any test code that calls the MailHog API. See the [API overview](/api-reference/overview).
+  </Accordion>
+
+  <Accordion title="Will Mailpit send my test emails to real people?">
+    No. Mailpit stores email and never delivers it, unless you configure a relay and release a message, or turn on automatic relaying or forwarding. See [How Mailpit captures email](/concepts/how-mailpit-works#mailpit-sends-email-only-when-you-configure-it-to).
+  </Accordion>
+
+  <Accordion title="Why are my emails gone after a restart?">
+    Mailpit uses a temporary database by default and deletes it when it stops. Set `--database` or `MP_DATABASE` to keep messages. See [Keep messages after a restart](/guides/keep-messages-after-restart).
+  </Accordion>
+
+  <Accordion title="How many emails does Mailpit keep?">
+    The newest 500 by default. Change it with `--max` (`MP_MAX_MESSAGES`), or use `0` for no limit. You can also delete messages by age with `--max-age`. See [Message storage and limits](/concepts/message-storage).
+  </Accordion>
+
+  <Accordion title="Which SMTP host should my app use in Docker?">
+    The Compose service name, such as `mailpit`, when both run in the same Compose project. `host.docker.internal` when Mailpit runs on your machine. Never `localhost` from inside a container. See [Fix "connection refused"](/troubleshooting/cant-connect-to-smtp).
+  </Accordion>
+
+  <Accordion title="Can several projects share one Mailpit?">
+    Yes. Every project can send to the same Mailpit. To tell their email apart, use [tags](/concepts/tags): add an `X-Tags` header per project, or a match rule such as `--tag 'shop=from:@shop.example.com'`. All users of one Mailpit see all messages. For separate mailboxes, run one Mailpit per project on different ports.
+  </Accordion>
+
+  <Accordion title="Can I run Mailpit on a public server?">
+    You can, but turn on a password and HTTPS first, because by default anyone who reaches the ports can read every message. See [Security and network exposure](/concepts/security).
+  </Accordion>
+
+  <Accordion title="Can I read Mailpit email in Thunderbird or Outlook? Does Mailpit support IMAP?">
+    Mailpit doesn't support IMAP. The maintainer has declined IMAP requests as not feasible, for example in [issue #730](https://github.com/axllent/mailpit/issues/730). Use POP3 instead.
+
+    Mailpit's POP3 server runs on port `1110` and starts only when you set a password file:
+
+    ```bash
+    mailpit --pop3-auth-file passwords.txt
+    ```
+
+    In your mail client, add a POP3 account with server `localhost`, port `1110`, and a username and password from the file. Add `--pop3-tls-cert` and `--pop3-tls-key` if your client requires encryption. See [Create a password file](/guides/protect-with-password-and-https#create-a-password-file).
+  </Accordion>
+
+  <Accordion title="Can I test how an email renders in different clients?">
+    Mailpit's **HTML check** reports which HTML and CSS features each popular email client supports, and the **Link check** tests every link in a message. Use them in the web UI or through `GET /api/v1/message/<ID>/html-check` and `/link-check`. To see the email in a real client, [release it](/guides/release-to-a-real-smtp-server) to a real inbox.
+  </Accordion>
+
+  <Accordion title="Is Mailpit free?">
+    Yes. Mailpit is open-source under the MIT license. The source is at [github.com/axllent/mailpit](https://github.com/axllent/mailpit).
+  </Accordion>
+
+  <Accordion title="Where can I report a bug or ask for help?">
+    Search the [Mailpit issues](https://github.com/axllent/mailpit/issues) first, then open an issue or a discussion on GitHub. These community docs aren't the place for Mailpit support. See [About these docs](/resources/about-these-docs).
+  </Accordion>
+</AccordionGroup>

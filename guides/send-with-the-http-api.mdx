@@ -1,0 +1,49 @@
+---
+title: "Send a message with the HTTP API"
+description: "Add a message to Mailpit with POST /api/v1/send and JSON instead of SMTP, including tags, HTML, and the Send API's separate authentication."
+---
+
+The Send API adds a message to Mailpit over HTTP. Use it when your tool can make HTTP requests but not SMTP connections, or to seed the inbox with test data.
+
+## Prerequisites
+
+- Mailpit running with the API at `http://localhost:8025`.
+
+## Send a message
+
+```bash
+curl -X POST http://localhost:8025/api/v1/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "From": {"Email": "noreply@example.com", "Name": "App"},
+    "To": [{"Email": "lin@example.com", "Name": "Lin"}],
+    "Subject": "Sent with the Send API",
+    "Text": "Plain-text body",
+    "HTML": "<p>HTML body</p>",
+    "Tags": ["api", "seed-data"]
+  }'
+```
+
+Mailpit replies with the new message's ID:
+
+```json
+{"ID":"3u87cJyGr8qWzuWJXArQfz"}
+```
+
+`From` is required. Without it, Mailpit returns `400` with `{"Error":"error building message: from not set"}`. For every field, including `Cc`, `Bcc`, `ReplyTo`, `Headers`, and base64-encoded `Attachments`, see [Send a message](/api-reference/message/send-a-message) in the API reference.
+
+## Protect the Send API separately
+
+By default, the Send API uses the same authentication as the web UI. You can set different rules for it:
+
+| Goal | Option |
+| :-- | :-- |
+| Separate credentials for sending only | `--send-api-auth-file <file>` or `MP_SEND_API_AUTH="user:pass"` |
+| No login for sending, even when the web UI has one | `--send-api-auth-accept-any` (`MP_SEND_API_AUTH_ACCEPT_ANY=true`) |
+
+Credentials for the Send API can't open the web UI or other API endpoints. Mailpit refuses to start if you set both options.
+
+## Related pages
+
+- [Send email from your app](/guides/send-email-from-your-app) over SMTP
+- [API overview](/api-reference/overview)

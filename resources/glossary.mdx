@@ -1,0 +1,66 @@
+---
+title: "Mailpit glossary"
+description: "Definitions of the terms used in these Mailpit docs, such as capture, release, relay, forwarding, Chaos, tag, webroot, and message summary."
+---
+
+Each term below has one meaning across these docs.
+
+## Capture
+
+What Mailpit does with each email it receives: stores it and shows it in the web UI and API, without delivering it.
+
+## Chaos
+
+A Mailpit feature that makes the SMTP server reject messages on purpose, for testing. See [Simulate SMTP failures with Chaos](/guides/simulate-smtp-failures).
+
+## Envelope recipient
+
+The address an SMTP client sends with the `RCPT TO` command. It can differ from the `To` header. Mailpit shows envelope recipients that aren't in any header under **Bcc**.
+
+## Forwarding
+
+Sending a copy of every incoming message to fixed addresses, set with `--smtp-forward-config`. Not the same as *release*.
+
+## Message ID
+
+Mailpit's own ID for a stored message, such as `30qU0iTtS42i1HwdwEWX9p`. API paths use it. `latest` is an alias for the newest message. Not the same as the `Message-ID` email header.
+
+## Message summary
+
+The short form of a message that lists, search, webhooks, and websocket events return: ID, addresses, subject, tags, size, and a snippet, without the body.
+
+## Persistent storage
+
+A database file that survives restarts, set with `--database` (`MP_DATABASE`). The opposite of *temporary storage*.
+
+## Pruning
+
+Mailpit automatically deleting the oldest messages when the inbox goes over `--max` messages or when messages are older than `--max-age`.
+
+## Relay
+
+The SMTP server Mailpit uses to send real email when you *release* a message. See [Release messages to a real SMTP server](/guides/release-to-a-real-smtp-server).
+
+## Release
+
+Sending a captured message to a real address through the *relay*, from the web UI or the API.
+
+## Runtime option
+
+A setting you pass when starting Mailpit, as a flag such as `--max` or an environment variable such as `MP_MAX_MESSAGES`. See [Runtime options](/reference/runtime-options).
+
+## Send API
+
+The `POST /api/v1/send` endpoint, which adds a message to Mailpit over HTTP instead of SMTP. See [Send a message with the HTTP API](/guides/send-with-the-http-api).
+
+## Tag
+
+A label on a message, added manually or automatically. See [Tags and automatic tagging](/concepts/tags).
+
+## Temporary storage
+
+Mailpit's default database, which is deleted when Mailpit stops.
+
+## Webroot
+
+The URL path Mailpit serves the web UI and API under, `/` by default. Set it with `--webroot` when you use a reverse proxy sub-path.

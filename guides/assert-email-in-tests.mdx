@@ -1,0 +1,169 @@
+---
+title: "Assert email content in automated tests"
+description: "Complete Node.js and Python tests that clear Mailpit, trigger an email, wait for it with the search API, and check the recipient and a link."
+---
+
+Use Mailpit's API in your test suite to check that your app sent the right email, for example a sign-up confirmation with a working link.
+
+## Prerequisites
+
+- Mailpit running with SMTP on `localhost:1025` and the API on `http://localhost:8025`.
+- For Node.js: Node.js 18 or later and `nodemailer` (`npm install nodemailer`).
+- For Python: Python 3.9 or later and `pytest` (`pip install pytest`).
+
+## The pattern
+
+Every email test follows four steps:
+
+1. **Clear the inbox** with `DELETE /api/v1/messages`, so old messages can't make a test pass.
+2. **Trigger the email** through your app.
+3. **Wait for the message** by polling `GET /api/v1/search` until it arrives. Email delivery isn't instant, so a single check is flaky.
+4. **Assert on the content** by fetching the full message with `GET /api/v1/message/<ID>`.
+
+## Example tests
+
+In both examples, `sendSignupEmail` stands in for your app's code. Replace it with the action that sends email, such as a call to your sign-up endpoint.
+
+<CodeGroup>
+```javascript signup.test.js
+// Run with: node --test signup.test.js
+// Requires Node.js 18+ and a running Mailpit (SMTP on 1025, API on 8025).
+const { test, before } = require("node:test");
+const assert = require("node:assert");
+const nodemailer = require("nodemailer");
+
+const MAILPIT_API = process.env.MAILPIT_API || "http://localhost:8025/api/v1";
+const smtp = nodemailer.createTransport({ host: "localhost", port: 1025, secure: false });
+
+// Stand-in for your app's code that sends a sign-up email.
+async function sendSignupEmail(to) {
+  await smtp.sendMail({
+    from: "App <noreply@example.com>",
+    to,
+    subject: "Confirm your email",
+    text: "Confirm your account: https://app.example.com/confirm?token=abc123",
+  });
+}
+
+// Poll the search API until a matching message arrives, or fail after the timeout.
+async function waitForMessage(query, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${MAILPIT_API}/search?query=${encodeURIComponent(query)}`);
+    const body = await res.json();
+    if (body.messages_count > 0) return body.messages[0];
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  throw new Error(`No message matched "${query}" within ${timeoutMs} ms`);
+}
+
+before(async () => {
+  // Start every run with an empty mailbox.
+  await fetch(`${MAILPIT_API}/messages`, { method: "DELETE" });
+});
+
+test("sign-up sends a confirmation email with a link", async () => {
+  await sendSignupEmail("new-user@example.com");
+
+  const summary = await waitForMessage('to:new-user@example.com subject:"Confirm your email"');
+  const message = await (await fetch(`${MAILPIT_API}/message/${summary.ID}`)).json();
+
+  assert.strictEqual(message.From.Address, "noreply@example.com");
+  const link = message.Text.match(/https:\/\/app\.example\.com\/confirm\?token=\w+/);
+  assert.ok(link, "confirmation link not found in the email body");
+});
+```
+
+```python test_signup.py
+# Run with: pytest test_signup.py
+# Requires Python 3.9+, pytest, and a running Mailpit (SMTP on 1025, API on 8025).
+import json
+import os
+import re
+import smtplib
+import time
+import urllib.parse
+import urllib.request
+from email.message import EmailMessage
+
+import pytest
+
+MAILPIT_API = os.environ.get("MAILPIT_API", "http://localhost:8025/api/v1")
+
+
+def api(method, path):
+    req = urllib.request.Request(f"{MAILPIT_API}{path}", method=method)
+    with urllib.request.urlopen(req, timeout=5) as res:
+        body = res.read()
+        return json.loads(body) if res.headers.get_content_type() == "application/json" else body
+
+
+def send_signup_email(to):
+    """Stand-in for your app's code that sends a sign-up email."""
+    msg = EmailMessage()
+    msg["From"] = "App <noreply@example.com>"
+    msg["To"] = to
+    msg["Subject"] = "Confirm your email"
+    msg.set_content("Confirm your account: https://app.example.com/confirm?token=abc123")
+    with smtplib.SMTP("localhost", 1025) as smtp:
+        smtp.send_message(msg)
+
+
+def wait_for_message(query, timeout=5.0):
+    """Poll the search API until a matching message arrives."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        result = api("GET", "/search?query=" + urllib.parse.quote(query))
+        if result["messages_count"] > 0:
+            return result["messages"][0]
+        time.sleep(0.2)
+    raise AssertionError(f'No message matched "{query}" within {timeout} s')
+
+
+@pytest.fixture(autouse=True)
+def empty_mailbox():
+    api("DELETE", "/messages")
+
+
+def test_signup_sends_confirmation_link():
+    send_signup_email("new-user@example.com")
+
+    summary = wait_for_message('to:new-user@example.com subject:"Confirm your email"')
+    message = api("GET", f"/message/{summary['ID']}")
+
+    assert message["From"]["Address"] == "noreply@example.com"
+    assert re.search(r"https://app\.example\.com/confirm\?token=\w+", message["Text"])
+```
+</CodeGroup>
+
+Both tests run in this docs site's own CI against a real Mailpit container. See [Test email in CI with GitHub Actions](/guides/test-email-in-ci).
+
+## Useful fields on a message
+
+`GET /api/v1/message/<ID>` returns, among others:
+
+| Field | Contains |
+| :-- | :-- |
+| `From`, `To`, `Cc`, `Bcc`, `ReplyTo` | Address objects with `Name` and `Address` |
+| `Subject` | The decoded subject |
+| `Text`, `HTML` | The plain-text and HTML bodies |
+| `Attachments`, `Inline` | Attachment details. Download one with `GET /api/v1/message/<ID>/part/<PartID>`. |
+| `Tags` | The message's tags |
+
+Use `latest` in place of an ID to get the newest message, for example `GET /api/v1/message/latest`.
+
+To extract a link, such as a password-reset or confirmation URL, search `Text` first, because it has no HTML markup. If your app sends HTML-only email, `Text` is empty, so search `HTML` and decode entities such as `&amp;` in the URL. To check every link automatically, use [`GET /api/v1/message/<ID>/link-check`](/api-reference/message-checks/link-check).
+
+## Keep parallel tests apart
+
+If tests run in parallel, clearing the whole inbox can delete another test's email. Instead, give each test a unique recipient with a plus-address, such as `user+test-42@example.com`, and search for `addressed:user+test-42@example.com` or `tag:test-42`. Mailpit tags plus-addresses automatically. See [Tags and automatic tagging](/concepts/tags#plus-addresses).
+
+<Tip>
+  Prefer `addressed:` over `to:` in tests. `to:` only searches the `To` header, so it misses recipients your app adds as Bcc. See [Search filter syntax](/reference/search-filters#field-filters).
+</Tip>
+
+## Related pages
+
+- [Search filter syntax](/reference/search-filters)
+- [API overview](/api-reference/overview)
+- [Websocket events](/api-reference/websocket-events), to react to new messages without polling

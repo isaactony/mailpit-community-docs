@@ -1,0 +1,62 @@
+---
+title: "Fix SMTP authentication and TLS errors"
+description: "Fix 530 Authentication required, 535 credentials invalid, STARTTLS and certificate errors, and Mailpit refusing to start with SMTP authentication."
+---
+
+Find the error from your app or from Mailpit's log below. Mailpit's defaults are no login and no encryption, so most of these errors come from settings that don't match on the two sides.
+
+## 530 5.7.0 Authentication required
+
+**Cause:** Mailpit requires an SMTP login, because it was started with a password file (`--smtp-auth-file` or `MP_SMTP_AUTH_FILE`) or with inline credentials (`MP_SMTP_AUTH`), and your app didn't log in.
+
+**Fix:** Set your app's SMTP username and password. For testing, start Mailpit with `--smtp-auth-accept-any` instead, which accepts any login or none.
+
+## 535 5.7.8 Authentication credentials invalid
+
+**Cause:** The username or password isn't in Mailpit's password file.
+
+**Fix:** Check the file's `username:password` lines, then restart Mailpit. Mailpit only reads the file at startup.
+
+## Mailpit stops with "authentication requires STARTTLS or TLS encryption"
+
+```text
+[smtp] authentication requires STARTTLS or TLS encryption, run with `--smtp-auth-allow-insecure` to allow insecure authentication
+```
+
+**Cause:** You set an SMTP password file without a certificate. Mailpit won't accept passwords over an unencrypted connection by default.
+
+**Fix:** Add a certificate with `--smtp-tls-cert` and `--smtp-tls-key`, or, for local testing, add `--smtp-auth-allow-insecure`. See [Protect Mailpit with a password and HTTPS](/guides/protect-with-password-and-https#require-a-login-for-smtp).
+
+## Your app fails with a STARTTLS or TLS error
+
+**Cause:** Your app tries to encrypt the connection, but Mailpit has no certificate. By default, Mailpit offers neither STARTTLS nor TLS.
+
+**Fix:** Turn off encryption in your app's mail settings. For example, set `secure: false` in Nodemailer, `EMAIL_USE_TLS = False` in Django, or `spring.mail.properties.mail.smtp.starttls.enable=false` in Spring Boot. To test encryption, give Mailpit a certificate instead.
+
+## Your app rejects Mailpit's certificate
+
+**Cause:** Mailpit uses a self-signed certificate, which your app doesn't trust.
+
+**Fix:** Add the certificate to your app's trusted certificates, or turn off certificate verification in your test configuration only.
+
+## Mailpit can't read the certificate or key
+
+```text
+[smtp] TLS certificate not found or readable: /certs/cert.pem
+[smtp] TLS key not found or readable: /certs/key.pem
+```
+
+**Cause:** The path is wrong, the file isn't mounted into the container, or a typo in a Compose file adds characters to the value. For example, writing `MP_SMTP_TLS_KEY=:/certs/key.pem` in a Compose `environment:` map makes the path start with `=`.
+
+**Fix:** Compare the path at the end of the log message with the real file, then check the volume mount and the file permissions.
+
+## Releasing fails with "unencrypted connection"
+
+**Cause:** The relay server needs encryption before login, and the relay is configured without it.
+
+**Fix:** Set `starttls: true` for port `587` or `tls: true` for port `465`. See [Release messages to a real SMTP server](/guides/release-to-a-real-smtp-server#common-release-errors).
+
+## Related pages
+
+- [Protect Mailpit with a password and HTTPS](/guides/protect-with-password-and-https)
+- [Fix "connection refused" when sending to Mailpit](/troubleshooting/cant-connect-to-smtp)

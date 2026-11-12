@@ -1,0 +1,89 @@
+---
+title: "Search filter syntax"
+description: "Every Mailpit search filter, such as to:, subject:, tag:, is:unread, has:attachment, and before:, with examples for the web UI and the search API."
+---
+
+The same search syntax works in the web UI search box, in `GET /api/v1/search?query=<query>`, in `DELETE /api/v1/search`, and in [tag match rules](/concepts/tags#match-rules).
+
+Searches aren't case-sensitive. Separate terms with spaces. A message must match every term.
+
+## Words and phrases
+
+| Query | Matches messages that |
+| :-- | :-- |
+| `john doe` | Contain both words, in any order |
+| `"john doe"` | Contain the exact phrase |
+| `john !doe` or `john -doe` | Contain `john` but not `doe` |
+
+## Field filters
+
+| Filter | Searches |
+| :-- | :-- |
+| `to:` | The To field |
+| `from:` | The From field |
+| `cc:`, `bcc:` | The Cc or Bcc field |
+| `reply-to:` | The Reply-To field |
+| `addressed:` | From, To, Cc, Bcc, and Reply-To together |
+| `subject:` | The subject line |
+| `message-id:` | The `Message-ID` header |
+| `tag:` | The message's tags |
+
+Quote values with spaces: `subject:"password reset"`, `tag:"Tag 1"`.
+
+<Note>
+  `to:` searches the `To` header, not the SMTP envelope. If a recipient was only in the envelope, as with Bcc, Mailpit lists it under `Bcc`, and `to:` doesn't find it. Use `addressed:` to match a recipient wherever it appears. Tested with Mailpit v1.33.1.
+</Note>
+
+## Status and size filters
+
+| Filter | Matches messages that |
+| :-- | :-- |
+| `is:read`, `is:unread` | Are read or unread |
+| `is:tagged` | Have at least one tag |
+| `has:attachment` | Have an attachment |
+| `has:inline` | Have an inline image |
+| `larger:2M` | Are at least 2 MB. Units: `K`, `KB`, `M`, `MB`. |
+| `smaller:1.5MB` | Are smaller than 1.5 MB |
+
+Put `!` before any filter to negate it, for example `!has:attachment`.
+
+## Date filters
+
+| Filter | Matches messages received |
+| :-- | :-- |
+| `after:2026/11/01` | On or after the start of 1 November 2026 |
+| `before:2026/11/01` | Before 1 November 2026, so up to the end of 31 October |
+
+Use the `yyyy/mm/dd` format. A date like `01/04/2026` is read as US format, January 4. The web UI sends your browser's time zone with the search. Mailpit logs invalid dates and ignores them.
+
+## Examples
+
+| Goal | Query |
+| :-- | :-- |
+| Password-reset email for one user | `to:ada@example.com subject:"reset your password"` |
+| Unread email with attachments | `is:unread has:attachment` |
+| Invoices not sent by the billing system | `subject:invoice !from:billing@example.com` |
+| Email from one test run | `tag:checkout-test` |
+
+## Use a search in the API
+
+URL-encode the query:
+
+```bash
+curl -s "http://localhost:8025/api/v1/search?query=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("to:ada@example.com is:unread"))')"
+```
+
+To delete everything that matches:
+
+```bash
+curl -X DELETE "http://localhost:8025/api/v1/search?query=subject%3Awelcome"
+```
+
+## Search limitation for non-ASCII characters
+
+General searches match accented characters in any case. Field filters such as `subject:` can only ignore case for ASCII letters, so `subject:"Äpfel"` doesn't match `äpfel`.
+
+## Related pages
+
+- [Search messages](/api-reference/messages/search-messages) in the API reference
+- [Tags and automatic tagging](/concepts/tags)

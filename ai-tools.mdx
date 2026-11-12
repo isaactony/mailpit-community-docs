@@ -1,0 +1,81 @@
+---
+title: "Use these docs with AI tools"
+description: "Connect your AI assistant or coding agent to these Mailpit docs with the MCP server, the agent skill, Markdown pages, or llms.txt."
+---
+
+These docs are built so AI assistants and coding agents can answer Mailpit questions from the docs instead of from memory.
+
+## Choose a connection method
+
+| Method | Best for | What the AI gets |
+| :-- | :-- | :-- |
+| [MCP server](#connect-the-docs-mcp-server) | Claude, Cursor, VS Code, and other MCP clients | Search over every page, on demand |
+| [Agent skill](#install-the-mailpit-skill) | Coding agents such as Claude Code | A short summary of Mailpit's defaults, tasks, and pitfalls |
+| [Page as Markdown](#give-an-ai-a-single-page) | Any chat assistant | One page, pasted or linked |
+| [llms.txt](#point-an-ai-at-llmstxt) | Tools that crawl a site | A list of every page with a one-line description |
+
+## Connect the docs MCP server
+
+The MCP server URL is:
+
+```text
+https://mailpit-community-docs.mintlify.site/mcp
+```
+
+<Tabs>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --transport http mailpit-docs https://mailpit-community-docs.mintlify.site/mcp
+    ```
+  </Tab>
+  <Tab title="Cursor and VS Code">
+    Open the menu at the top of any page and select **Connect to Cursor** or **Connect to VS Code**.
+  </Tab>
+  <Tab title="Any MCP client">
+    ```bash
+    npx add-mcp https://mailpit-community-docs.mintlify.site/mcp
+    ```
+  </Tab>
+</Tabs>
+
+The server only searches these public docs. It can't reach your Mailpit instance or your messages.
+
+## Install the Mailpit skill
+
+The skill tells an agent Mailpit's defaults, the commands for common tasks, and the mistakes to avoid, such as using `localhost` from inside a Docker container.
+
+<Visibility for="humans">
+Paste this prompt into your coding agent:
+
+<Prompt description="Install the Mailpit skill in your coding agent." icon="sparkles" actions={["copy", "cursor"]}>
+Install the Mailpit docs skill so you can help me test email with Mailpit.
+
+1. Run `npx skills add https://mailpit-community-docs.mintlify.site`.
+2. Print the name and description of each skill that was installed.
+3. Summarize in one paragraph what you can now help me do with Mailpit.
+4. When you configure an app to send to Mailpit, check whether the app runs in Docker before choosing the SMTP host.
+</Prompt>
+</Visibility>
+
+<Visibility for="agents">
+To install the Mailpit skill, run this command, then read the installed skill:
+
+```bash
+npx skills add https://mailpit-community-docs.mintlify.site
+```
+</Visibility>
+
+## Give an AI a single page
+
+- Open the menu at the top of any page and select **Copy page**, **Open in ChatGPT**, or **Open in Claude**.
+- Or add `.md` to the page URL, for example `https://mailpit-community-docs.mintlify.site/quickstart.md`.
+
+## Point an AI at llms.txt
+
+`/llms.txt` lists every page with its description, and `/llms-full.txt` contains the full text of every page in one file.
+
+## Get better answers from AI tools
+
+- Say how you run Mailpit (binary, Docker, Docker Compose, or CI) and how you run your app. Most connection problems depend on this.
+- Paste the exact error message, such as `Connection refused` or `530 5.7.0 Authentication required`.
+- Ask the AI to link the page it used, so you can check the answer.

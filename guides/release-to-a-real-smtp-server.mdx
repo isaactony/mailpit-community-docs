@@ -1,0 +1,102 @@
+---
+title: "Release messages to a real SMTP server"
+description: "Configure an SMTP relay so you can send a captured message to a real inbox, such as Gmail or Microsoft 365, from the web UI or the API."
+---
+
+**Releasing** a message sends a copy of a captured email to a real address through an SMTP server you configure, the **relay**. Use it to check how an email looks in real mail clients.
+
+## Prerequisites
+
+- Access to an SMTP server and its credentials, for example your email provider's SMTP settings or a transactional email service.
+- Recipient addresses you're allowed to send test email to.
+
+<Warning>
+  Released email goes to real inboxes. Limit who can receive it with `allowed-recipients`, as shown below.
+</Warning>
+
+## Configure the relay
+
+<Steps>
+  <Step title="Create the relay configuration file">
+    ```yaml relay.yaml
+    host: smtp.example.com
+    port: 587
+    starttls: true
+    auth: plain
+    username: relay-user@example.com
+    password: your-smtp-password
+    allowed-recipients: '@example\.com$'
+    subject-prefix: "[TEST]"
+    ```
+
+    Set `allowed-recipients` to match the inboxes you'll release to. With the value above, releasing to a Gmail address fails. To allow one address only, use `'^you@gmail\.com$'`.
+
+    <Accordion title="Example: release through a Gmail account">
+      Gmail's SMTP server needs an [app password](https://support.google.com/accounts/answer/185833), which requires 2-Step Verification on the account. Your regular password doesn't work.
+
+      ```yaml relay.yaml
+      host: smtp.gmail.com
+      port: 587
+      starttls: true
+      auth: plain
+      username: you@gmail.com
+      password: your-16-character-app-password
+      allowed-recipients: '^you@gmail\.com$'
+      subject-prefix: "[TEST]"
+      ```
+
+      Gmail may rewrite the `From` address to your account. Set `override-from: you@gmail.com` to avoid rejected messages.
+    </Accordion>
+
+    | Key | Default | Purpose |
+    | :-- | :-- | :-- |
+    | `host` | Required | The relay server |
+    | `port` | `25` | Usually `587` for STARTTLS or `465` for TLS |
+    | `starttls` | `false` | Upgrade the connection with STARTTLS |
+    | `tls` | `false` | Use TLS from the start, usually on port `465` |
+    | `auth` | `none` | `none`, `plain`, `login`, or `cram-md5` |
+    | `allowed-recipients` | Any | A regular expression that release addresses must match. Use single quotes. |
+    | `blocked-recipients` | None | A regular expression for addresses that can never receive released email |
+    | `override-from` | None | Replace the sender address, for relays that only accept one sender |
+    | `return-path` | None | Set a bounce address. Strict providers like Gmail may reject messages without a valid one. |
+    | `subject-prefix` | None | Text added before the subject, such as `[TEST]` |
+  </Step>
+
+  <Step title="Start Mailpit with the file">
+    ```bash
+    mailpit --smtp-relay-config relay.yaml
+    ```
+
+    With Docker, mount the file and set `MP_SMTP_RELAY_CONFIG`, or set each key as an environment variable, such as `MP_SMTP_RELAY_HOST` and `MP_SMTP_RELAY_PORT`. Relay settings aren't available as command-line flags.
+  </Step>
+
+  <Step title="Release a message">
+    In the web UI, open a message and select **Release**. Or use the API:
+
+    ```bash
+    curl -X POST http://localhost:8025/api/v1/message/latest/release \
+      -H "Content-Type: application/json" \
+      -d '{"To": ["you@example.com"]}'
+    ```
+  </Step>
+</Steps>
+
+Released messages get a new `Message-ID`, because Gmail can hide email with a duplicate one. Set `preserve-message-ids: true` to keep the original.
+
+## Common release errors
+
+| Error | Cause | Fix |
+| :-- | :-- | :-- |
+| `400` with `error connecting to :0` | No relay is configured. | Start Mailpit with `--smtp-relay-config` or `MP_SMTP_RELAY_HOST`. |
+| `unencrypted connection` during AUTH | The relay requires encryption before login. | Set `starttls: true` (port `587`) or `tls: true` (port `465`). |
+| A certificate error | The relay uses a self-signed certificate. | Set `allow-insecure: true`, for test relays only. |
+| The recipient is rejected | The address doesn't match `allowed-recipients`. | Change the address or the expression. |
+
+## Relay messages automatically
+
+To relay every incoming message as well as storing it, add `--smtp-relay-all`. To relay only some recipients, use `--smtp-relay-matching '<regex>'`. Both send real email without anyone pressing **Release**, so use them with care.
+
+## Related pages
+
+- [Security and network exposure](/concepts/security)
+- [Release message](/api-reference/message/release-message) in the API reference

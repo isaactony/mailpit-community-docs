@@ -1,0 +1,53 @@
+---
+title: "Security and network exposure"
+description: "What Mailpit exposes by default, why it isn't an open relay, and which settings to add before you run it on a shared server or the internet."
+---
+
+Mailpit is built for development machines. Its defaults favor convenience: no passwords, no TLS, and listening on every network interface. That's fine on a laptop, but not on a server other people can reach.
+
+## What the defaults expose
+
+| Part | Default | Risk on a shared network |
+| :-- | :-- | :-- |
+| Web UI and API on `[::]:8025` | No login | Anyone who can reach the port can read, send, and delete every captured email. |
+| SMTP on `[::]:1025` | No login | Anyone can add email to the inbox. |
+| Captured email | Stored as received | Test email often contains password-reset links, tokens, and personal data. |
+
+When Mailpit listens on a non-loopback address without a password file or allowed-hosts list, it logs this warning at startup:
+
+```text
+[http] listening on [::]:8025 without --ui-auth-file or --allowed-hosts; the API is reachable from any host that can route to this interface
+```
+
+## Mailpit isn't an open relay
+
+An open relay delivers email for anyone. Mailpit doesn't deliver email at all unless you set up a relay or forwarding (see [How Mailpit captures email](/concepts/how-mailpit-works#mailpit-sends-email-only-when-you-configure-it-to)). Even then, you can limit release destinations with `allowed-recipients` and `blocked-recipients`.
+
+## Lock Mailpit down on a shared server
+
+Choose the settings that fit your setup:
+
+| Goal | Setting | Guide |
+| :-- | :-- | :-- |
+| Only accept connections from this machine | `--listen 127.0.0.1:8025 --smtp 127.0.0.1:1025` | [Runtime options](/reference/runtime-options#network-and-ports) |
+| Require a password for the web UI and API | `--ui-auth-file` | [Protect Mailpit with a password and HTTPS](/guides/protect-with-password-and-https) |
+| Require a password for SMTP | `--smtp-auth-file` plus TLS | Same guide |
+| Serve the web UI over HTTPS | `--ui-tls-cert` and `--ui-tls-key`, or a reverse proxy | Same guide, or [Run Mailpit behind a reverse proxy](/guides/reverse-proxy) |
+| Accept only expected recipients | `--smtp-allowed-recipients '<regex>'` | [Runtime options](/reference/runtime-options#smtp-server) |
+| Block DNS-rebinding attacks | `--allowed-hosts mailpit.example.com` | [Runtime options](/reference/runtime-options#web-ui-and-api) |
+| Hide the **Delete all** button | `--hide-delete-all-button` | [Runtime options](/reference/runtime-options#web-ui-and-api) |
+
+## Cross-origin requests
+
+Mailpit accepts API and websocket requests only from the same origin as the web UI. Since v1.29.0, it blocks requests whose `Origin` header doesn't match. To call the API from browser code on another domain, list that domain with `--api-cors` (`MP_API_CORS`):
+
+```bash
+mailpit --api-cors "app.example.com,localhost:3000"
+```
+
+Include the port when the origin uses one. `*` allows every origin, so use it with care.
+
+## Related pages
+
+- [Protect Mailpit with a password and HTTPS](/guides/protect-with-password-and-https)
+- [Fix a blank page or 403 errors behind a reverse proxy](/troubleshooting/blank-page-or-403-behind-proxy)

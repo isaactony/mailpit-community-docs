@@ -1,0 +1,63 @@
+---
+title: "Fix a blank page or 403 errors behind a reverse proxy"
+description: "Fix Mailpit behind nginx, Apache, Caddy, or Traefik when the page is blank, deletes return 403, or new messages don't appear without a refresh."
+---
+
+Mailpit works at `http://localhost:8025`, but not through your reverse proxy. Find your symptom below. For working configurations, see [Run Mailpit behind a reverse proxy](/guides/reverse-proxy).
+
+## The page returns 404, or loads blank or unstyled
+
+**Cause:** Mailpit is served under a sub-path, such as `/mailpit/`, but Mailpit doesn't know it. Depending on the proxy configuration, the page itself returns `404`, or it loads but the browser requests scripts and styles from the wrong path and the console shows `404` errors for JavaScript and CSS files.
+
+**Fix:** Start Mailpit with the same path, including the trailing slash:
+
+```bash
+mailpit --webroot /mailpit/
+```
+
+Or set `MP_WEBROOT=/mailpit/`. Open the page with the trailing slash too: `https://example.com/mailpit/`.
+
+## Deleting, marking as read, or tagging returns 403
+
+**Cause:** Since v1.29.0, Mailpit rejects API and websocket requests whose `Origin` header doesn't match the host. Your proxy changes the `Host` header, so the two no longer match. Browsers send `Origin` on `PUT` and `DELETE` requests, so those fail with `403` while the page itself still loads.
+
+Tested with nginx and Mailpit v1.33.1: with `proxy_set_header Host $http_host;`, a `DELETE` through the proxy returned `200`. Without it, the same request returned `403`.
+
+**Fix:** Make the proxy keep the original `Host` header:
+
+| Proxy | Setting |
+| :-- | :-- |
+| nginx | `proxy_set_header Host $http_host;` |
+| Apache | `ProxyPreserveHost On` |
+| Caddy | `header_up Host {host}` inside `reverse_proxy` |
+
+If you can't change the proxy, list both addresses with `--api-cors`, such as `--api-cors "mail.example.com,127.0.0.1"`. The official docs recommend fixing the `Host` header instead.
+
+## Every request returns 403
+
+**Cause:** `--allowed-hosts` is set and doesn't include the host name the proxy uses.
+
+**Fix:** Add that name to `--allowed-hosts` (`MP_ALLOWED_HOSTS`). Entries without a port match any port.
+
+## New messages only appear after a refresh
+
+**Cause:** The proxy doesn't forward websocket connections to `/api/events`.
+
+**Fix:** Add websocket support:
+
+| Proxy | Setting |
+| :-- | :-- |
+| nginx | `proxy_http_version 1.1;`, `proxy_set_header Upgrade $http_upgrade;`, and `proxy_set_header Connection "Upgrade";` |
+| Apache | Turn on `proxy_wstunnel` and add the `RewriteRule` for `websocket` upgrades shown in the [proxy guide](/guides/reverse-proxy) |
+| Caddy | Works automatically |
+
+## Browser notifications don't work
+
+**Cause:** Browsers only allow notifications on HTTPS pages or on `http://localhost`.
+
+**Fix:** Serve Mailpit through HTTPS. See [Protect Mailpit with a password and HTTPS](/guides/protect-with-password-and-https).
+
+## Related pages
+
+- [Run Mailpit behind a reverse proxy](/guides/reverse-proxy)
+- [Security and network exposure](/concepts/security#cross-origin-requests)

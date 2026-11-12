@@ -1,0 +1,55 @@
+---
+title: "Message storage and limits"
+description: "Where Mailpit stores messages, why they disappear on restart by default, how the 500-message limit and age limit prune old email, and which file systems to avoid."
+---
+
+Mailpit stores every message in a SQLite database. How long messages last depends on two settings: whether the database is temporary or persistent, and the pruning limits.
+
+## Temporary storage is the default
+
+Unless you set a database path, Mailpit creates a temporary database and **deletes it when Mailpit stops**. Restarting Mailpit, or recreating its Docker container, empties the inbox.
+
+To keep messages, set a database file with `--database` or `MP_DATABASE`:
+
+```bash
+mailpit --database ./mailpit.db
+```
+
+Restarting Mailpit with the same path loads the stored messages again. For Docker setups, see [Keep messages after a restart](/guides/keep-messages-after-restart).
+
+<Note>
+  Older Mailpit versions used `--db-file` and `MP_DATA_FILE`. Mailpit v1.33 still accepts `MP_DATA_FILE` but logs `ENV MP_DATA_FILE has been deprecated, use MP_DATABASE`. Switch to `MP_DATABASE`.
+</Note>
+
+## Old messages are pruned automatically
+
+| Limit | Default | Option | Example |
+| :-- | :-- | :-- | :-- |
+| Number of messages | 500 | `--max` or `MP_MAX_MESSAGES` | `--max 5000`. Use `0` for no limit. |
+| Age of messages | No limit | `--max-age` or `MP_MAX_AGE` | `--max-age 36h` or `--max-age 14d`. The `h` or `d` is required. |
+
+When the inbox goes over a limit, Mailpit deletes the oldest messages first. You can use both limits together.
+
+## Size and recipient limits
+
+| Limit | Default | Option | What the sender sees |
+| :-- | :-- | :-- | :-- |
+| Message size | 50 MB | `--max-message-size` (in MB, `0` for no limit) | An SMTP error |
+| Recipients per message | 100 | `--smtp-max-recipients` | `452 4.5.3 Too many recipients` |
+
+## Store the database on a local disk
+
+SQLite needs a local file system. On network storage such as NFS, Samba, or some Kubernetes volumes, Mailpit can crash or report locking errors.
+
+- Put the database on a local disk or a local persistent volume.
+- If you must use network storage, start Mailpit with `--disable-wal` (`MP_DISABLE_WAL=true`). Samba clients also need the `nobrl` mount option.
+- To share storage between several Mailpit instances, use an [rqlite](https://rqlite.io/) server: `--database http://localhost:4001`. Give each instance its own `--tenant-id`.
+
+## Performance
+
+The official docs report that Mailpit stores about 200 to 300 emails per second over SMTP and has been tested with over 135,000 stored emails. Messages are compressed with zstd. Lower or turn off compression with `--compression 0` to save CPU at the cost of disk space.
+
+## Related pages
+
+- [Keep messages after a restart](/guides/keep-messages-after-restart)
+- [Runtime options: storage](/reference/runtime-options#storage-and-limits)

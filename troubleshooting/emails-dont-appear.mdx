@@ -1,0 +1,55 @@
+---
+title: "Fix emails that don't appear in Mailpit"
+description: "Find out why sent email is missing from Mailpit: wrong server, restarted container, the 500-message limit, rejected recipients, Chaos, or a message without HTML."
+---
+
+Your app reports that it sent an email without errors, but the email isn't in Mailpit. Start by checking whether Mailpit received anything at all:
+
+```bash
+curl -s http://localhost:8025/api/v1/info
+```
+
+The `Messages` value is the number of stored messages.
+
+## The app sent to a different server
+
+Your app may still use its old SMTP settings, for example because of cached configuration. Restart the app after changing mail settings. Laravel also needs `php artisan config:clear`. Confirm the host and port in [Send email from your app](/guides/send-email-from-your-app).
+
+To see each SMTP connection, start Mailpit with `--verbose`. If no connection appears in the log when your app sends, the email went somewhere else.
+
+## Mailpit restarted and lost the messages
+
+Mailpit deletes all messages when it stops, unless you set a database file. Recreating a Docker container has the same effect. See [Keep messages after a restart](/guides/keep-messages-after-restart).
+
+If you set `MP_DATABASE` and messages still disappear, check the spelling. Mailpit ignores unknown environment variables without a warning.
+
+## Old messages were pruned
+
+Mailpit keeps only the newest 500 messages by default. In a busy test suite, earlier messages are deleted. Raise the limit with `--max 5000` (`MP_MAX_MESSAGES`), or `--max 0` for no limit. Also check `--max-age`.
+
+## Mailpit rejected the message
+
+Your app should log an error in these cases. Check its log for the SMTP response:
+
+| SMTP response | Cause | Fix |
+| :-- | :-- | :-- |
+| `452 4.5.3 Too many recipients` | More than 100 recipients | `--smtp-max-recipients` |
+| `<code> Chaos <trigger> error` | [Chaos](/guides/simulate-smtp-failures) is on | Set the trigger probability to `0`, or restart Mailpit |
+| A size error | The message is over 50 MB | `--max-message-size` |
+| `550 5.1.0 Requested action not taken: mailbox unavailable` | The recipient doesn't match `--smtp-allowed-recipients` | Change the expression or the recipient |
+| `530 5.7.0 Authentication required` | SMTP login is required | See [Fix SMTP authentication and TLS errors](/troubleshooting/smtp-auth-and-tls-errors) |
+
+If `--smtp-ignore-rejected-recipients` is set, Mailpit answers rejected recipients with success and doesn't store the message, so your app sees no error.
+
+## The message is there but the view is empty
+
+`/view/<ID>.html` returns `404` when the message has no HTML part, for example a plain-text email. Use `/view/<ID>.txt` for those.
+
+## You're searching for the wrong thing
+
+Searches match every term. Check the search box, then clear it to see the whole inbox. See [Search filter syntax](/reference/search-filters).
+
+## Related pages
+
+- [Fix "connection refused" when sending to Mailpit](/troubleshooting/cant-connect-to-smtp)
+- [Message storage and limits](/concepts/message-storage)

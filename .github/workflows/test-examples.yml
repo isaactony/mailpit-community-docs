@@ -1,0 +1,46 @@
+# Runs the code examples from the docs against a real Mailpit service container.
+# This is the same workflow shown in guides/test-email-in-ci.mdx.
+name: Test email examples
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  email-tests:
+    runs-on: ubuntu-latest
+    services:
+      mailpit:
+        image: axllent/mailpit:v1.33
+        ports:
+          - 1025:1025
+          - 8025:8025
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Wait for Mailpit
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8025/readyz && break
+            sleep 1
+          done
+
+      - name: Run the Node.js example test
+        working-directory: examples/node
+        run: |
+          npm install nodemailer@6
+          node --test signup.test.js
+
+      - name: Run the Python example test
+        working-directory: examples/python
+        run: |
+          pip install pytest
+          pytest -q test_signup.py

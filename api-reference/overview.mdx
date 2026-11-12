@@ -1,0 +1,82 @@
+---
+title: "Mailpit API overview"
+description: "Base URL, authentication, the latest message alias, pagination, error responses, and the most-used endpoints of the Mailpit REST API v1."
+---
+
+The Mailpit REST API lets scripts and tests read, search, send, tag, release, and delete captured messages. It's served by the same HTTP server as the web UI.
+
+## Base URL
+
+```text
+http://localhost:8025/api/v1
+```
+
+Replace the host and port if you changed `--listen`, and add the path if you set `--webroot`, for example `http://localhost:8025/mailpit/api/v1`. Mailpit also serves interactive API docs at `http://localhost:8025/api/v1/`.
+
+## Authentication
+
+The API has no keys. It uses the same login as the web UI:
+
+- With no `--ui-auth-file`, every request is accepted.
+- With a password file, use HTTP basic authentication: `curl -u user:password ...`. Requests without valid credentials get `401` with the body `Unauthorized.`.
+- `POST /api/v1/send` can have its own credentials. See [Send a message with the HTTP API](/guides/send-with-the-http-api#protect-the-send-api-separately).
+
+## Use latest instead of an ID
+
+Anywhere a path takes a message `ID`, you can pass `latest` for the newest message:
+
+```bash
+curl -s http://localhost:8025/api/v1/message/latest
+curl -s http://localhost:8025/api/v1/message/latest/link-check
+```
+
+## Pagination
+
+`GET /api/v1/messages` and `GET /api/v1/search` return pages of message summaries, newest first.
+
+| Parameter | Default | Description |
+| :-- | :-- | :-- |
+| `start` | `0` | Number of messages to skip |
+| `limit` | `50` | Messages per page |
+
+The response includes `total` (all messages), `messages_count` (messages matching the request), `count` (messages in this page), `start`, `unread`, `tags`, and the `messages` array.
+
+```bash
+curl -s "http://localhost:8025/api/v1/messages?start=50&limit=50"
+```
+
+## Errors
+
+| Status | Body | Example cause |
+| :-- | :-- | :-- |
+| `400` | JSON: `{"Error":"<message>"}` | A required field is missing, such as `From` in a send request |
+| `401` | Text: `Unauthorized.` | Missing or wrong basic-auth credentials |
+| `403` | Text | The `Origin` or `Host` header isn't allowed. See [Fix 403 errors behind a reverse proxy](/troubleshooting/blank-page-or-403-behind-proxy). |
+| `404` | Text: `404 page not found` | No message with that ID, or a `/view/<ID>.html` request for a message without HTML |
+
+## Most-used endpoints
+
+| Task | Request |
+| :-- | :-- |
+| List messages | [`GET /api/v1/messages`](/api-reference/messages/list-messages) |
+| Search messages | [`GET /api/v1/search?query=...`](/api-reference/messages/search-messages) |
+| Get one message with its bodies | [`GET /api/v1/message/{ID}`](/api-reference/message/get-message-summary) |
+| Get the raw source | [`GET /api/v1/message/{ID}/raw`](/api-reference/message/get-message-source) |
+| Delete all messages | [`DELETE /api/v1/messages`](/api-reference/messages/delete-messages) with no body |
+| Delete matching messages | [`DELETE /api/v1/search?query=...`](/api-reference/messages/delete-messages-by-search) |
+| Send a message | [`POST /api/v1/send`](/api-reference/message/send-a-message) |
+| Release a message | [`POST /api/v1/message/{ID}/release`](/api-reference/message/release-message) |
+| Check that Mailpit is up | `GET /readyz` (returns `200`) |
+
+<Warning>
+  `DELETE /api/v1/messages` with no body deletes **every** message. To delete specific messages, send `{"IDs": ["<ID>", "<ID>"]}`. On Windows `cmd.exe`, single quotes don't work around JSON, so use double quotes and escape the inner ones.
+</Warning>
+
+## Call the API from a browser
+
+Browser code on another origin needs `--api-cors`. See [Security and network exposure](/concepts/security#cross-origin-requests).
+
+## Related pages
+
+- [Assert email content in automated tests](/guides/assert-email-in-tests)
+- [Websocket events](/api-reference/websocket-events)

@@ -1,0 +1,88 @@
+---
+title: "Simulate SMTP failures with Chaos"
+description: "Use Mailpit's Chaos feature to make SMTP reject the sender, recipients, or login with a chosen error code, so you can test your app's retry and error handling."
+---
+
+Chaos makes Mailpit's SMTP server reject messages on purpose. Use it to test what your app does when sending email fails.
+
+## Prerequisites
+
+- Mailpit v1.20.0 or later.
+
+## Turn Chaos on
+
+Chaos is off by default and can't be turned on while Mailpit runs. Start Mailpit with one of these:
+
+| Option | Effect |
+| :-- | :-- |
+| `--enable-chaos` (`MP_ENABLE_CHAOS=true`) | Turns Chaos on with every trigger at 0%. Set triggers later in the web UI or API. |
+| `--chaos-triggers <triggers>` (`MP_CHAOS_TRIGGERS`) | Turns Chaos on and sets triggers at startup |
+
+## Choose a trigger
+
+| Trigger | Fails when | Notes |
+| :-- | :-- | :-- |
+| `Sender` | The client sends the sender address | |
+| `Recipient` | The client sends the recipients | |
+| `Authentication` | The client logs in | Only works when SMTP authentication is configured |
+
+Each trigger has an error code from `400` to `599` and a probability from `0` to `100` percent. A failed step returns `<code> Chaos <trigger> error`, for example `451 Chaos recipient error`.
+
+## Set triggers
+
+<Tabs>
+  <Tab title="At startup">
+    The format is `<trigger>:<code>:<probability>`, comma-separated, with no spaces:
+
+    ```bash
+    mailpit --chaos-triggers Recipient:451:100
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X PUT http://localhost:8025/api/v1/chaos \
+      -H "Content-Type: application/json" \
+      -d '{"Recipient": {"ErrorCode": 451, "Probability": 100}}'
+    ```
+
+    The response shows all three triggers. Read the current settings with `GET /api/v1/chaos`.
+  </Tab>
+  <Tab title="Web UI">
+    Open **Settings** (the gear icon at the bottom left) and select the **Chaos** tab.
+  </Tab>
+</Tabs>
+
+## Check that it works
+
+With the `Recipient` trigger at 100%, sending fails. In Python:
+
+```python
+import smtplib
+
+try:
+    with smtplib.SMTP("localhost", 1025) as smtp:
+        smtp.sendmail("app@example.com", ["user@example.com"], "Subject: test\r\n\r\nHello")
+except smtplib.SMTPRecipientsRefused as err:
+    print(err)  # {'user@example.com': (451, b'Chaos recipient error')}
+```
+
+## Turn the failures off
+
+Set the probability back to `0`:
+
+```bash
+curl -X PUT http://localhost:8025/api/v1/chaos \
+  -H "Content-Type: application/json" \
+  -d '{"Recipient": {"ErrorCode": 451, "Probability": 0}}'
+```
+
+Restarting Mailpit also resets triggers set in the web UI or API.
+
+<Note>
+  `4xx` codes mean "try again later", and `5xx` codes mean "permanent failure". Test both: your app should usually retry the first and give up on the second.
+</Note>
+
+## Related pages
+
+- [Test email in CI with GitHub Actions](/guides/test-email-in-ci)
+- [Set Chaos triggers](/api-reference/testing/set-chaos-triggers) in the API reference

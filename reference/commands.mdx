@@ -1,0 +1,107 @@
+---
+title: "Mailpit commands"
+description: "Reference for the mailpit subcommands: sendmail, readyz, ingest, dump, reindex, and version, with their options and exit codes."
+---
+
+Running `mailpit` with no subcommand starts the server. The subcommands below are tools for working with a Mailpit server or its data.
+
+```bash
+mailpit [command] [flags]
+```
+
+## mailpit sendmail
+
+A `sendmail` replacement that delivers to Mailpit over SMTP. Use it where your app or language calls a `sendmail` binary, such as PHP's `mail()`.
+
+```bash
+mailpit sendmail [flags] [recipients] < message.eml
+```
+
+| Flag | Default | Description |
+| :-- | :-- | :-- |
+| `-S` | `localhost:1025` | Mailpit's SMTP address. Also settable with `MP_SENDMAIL_SMTP_ADDR`. |
+| `-f` | `<your user>@<your host>` | Envelope sender address. Also settable with `MP_SENDMAIL_FROM`. |
+| `-bs` | | Read SMTP commands from standard input |
+| `-t`, `-i`, `-o`, `-v` | | Accepted for compatibility and ignored |
+
+Example:
+
+```bash
+printf 'From: app@example.com\nTo: ada@example.com\nSubject: Via sendmail\n\nHello\n' \
+  | mailpit sendmail -t
+```
+
+To replace the system `sendmail` on a machine where Mailpit runs on the default port, symlink it: `ln -s /usr/local/bin/mailpit /usr/sbin/sendmail`. Mailpit's sendmail is meant for delivering to Mailpit, not to other mail servers.
+
+## mailpit readyz
+
+Checks whether a Mailpit server is running and ready.
+
+```bash
+mailpit readyz
+```
+
+| Exit code | Meaning |
+| :-- | :-- |
+| `0` | Mailpit answered on `/readyz` |
+| `1` | Mailpit couldn't be reached or isn't ready |
+
+Pass `--listen` if the web UI uses a non-default address, for example `mailpit readyz --listen 127.0.0.1:9025`. Inside the Docker image, the command detects the address from the environment. Use it for health checks:
+
+```yaml
+healthcheck:
+  test: ["CMD", "/mailpit", "readyz"]
+```
+
+## mailpit ingest
+
+Delivers email files to a running Mailpit over SMTP. Use it to load sample emails for testing. Each email must be its own file, as in Maildir format. Mbox files aren't supported.
+
+```bash
+mailpit ingest ./sample-emails/
+```
+
+| Flag | Default | Description |
+| :-- | :-- | :-- |
+| `-S`, `--smtp-addr` | `localhost:1025` | Mailpit's SMTP address |
+| `-r`, `--recent` | All | Only ingest files modified in the last N days |
+| `--max-message-size` | `50` | Skip files larger than this many MB. `0` means no limit. |
+
+## mailpit dump
+
+Exports every stored message to a folder, one file per message. It reads from a database file or from a running Mailpit.
+
+```bash
+# From a database file
+mailpit dump ./backup --database /var/lib/mailpit/mailpit.db
+
+# From a running Mailpit (use the base URL, not the API URL)
+mailpit dump ./backup --http http://localhost:8025/
+```
+
+Use `--tenant-id` if the database is shared between instances.
+
+## mailpit reindex
+
+Rebuilds the search index for every message in a database. Use it if search results look wrong after an upgrade or a crash. For large mailboxes, stop Mailpit first to avoid database locking errors.
+
+```bash
+mailpit reindex /path/to/mailpit.db
+```
+
+## mailpit version
+
+Prints the installed version and checks whether a newer release exists.
+
+```bash
+mailpit version
+```
+
+```text Output
+mailpit v1.33.1 compiled with go1.27.3 on darwin/arm64
+```
+
+## Related pages
+
+- [Runtime options](/reference/runtime-options)
+- [Send email from your app](/guides/send-email-from-your-app)

@@ -1,0 +1,81 @@
+---
+title: "Quickstart: catch your first email"
+description: "Run Mailpit with Docker or Homebrew, send a test email to port 1025, and read it in the web UI and the API in about five minutes."
+---
+
+In this quickstart, you start Mailpit, send it an email, and read that email in the browser and through the API.
+
+## Prerequisites
+
+- Docker, or Homebrew on macOS. For other install methods, see [Install Mailpit](/install).
+- Python 3, to send the test email in step 2. It's preinstalled on macOS and most Linux distributions.
+- Ports `1025` and `8025` free on your machine.
+
+<Steps>
+  <Step title="Start Mailpit">
+    <CodeGroup>
+    ```bash Docker
+    docker run -d --name mailpit -p 8025:8025 -p 1025:1025 axllent/mailpit
+    ```
+
+    ```bash Homebrew
+    brew install mailpit
+    mailpit
+    ```
+    </CodeGroup>
+
+    Mailpit is ready when its log shows `[smtpd] starting on [::]:1025` and `[http] accessible via http://localhost:8025/`. With Docker, view the log with `docker logs mailpit`. With Homebrew, keep this terminal open and use a second one for the next steps.
+  </Step>
+
+  <Step title="Send a test email">
+    Save this script as `send.py`:
+
+    ```python send.py
+    import smtplib
+    from email.message import EmailMessage
+
+    msg = EmailMessage()
+    msg["From"] = "App <noreply@example.com>"
+    msg["To"] = "ada@example.com"
+    msg["Subject"] = "Welcome to the app"
+    msg.set_content("Thanks for signing up.")
+
+    # Mailpit accepts plain SMTP with no login by default.
+    with smtplib.SMTP("localhost", 1025) as smtp:
+        smtp.send_message(msg)
+    print("Sent")
+    ```
+
+    Run it:
+
+    ```bash
+    python3 send.py
+    ```
+
+    The script prints `Sent`.
+  </Step>
+
+  <Step title="Read the email in the web UI">
+    Open [http://localhost:8025](http://localhost:8025). The message **Welcome to the app** is at the top of the inbox. Select it to see the text, HTML, headers, and raw source.
+  </Step>
+
+  <Step title="Read the email through the API">
+    ```bash
+    curl -s http://localhost:8025/api/v1/message/latest
+    ```
+
+    The response is JSON with fields such as `Subject`, `From`, `To`, `Text`, and `HTML`. `latest` is a shortcut for the ID of the newest message.
+  </Step>
+</Steps>
+
+## Before you go further
+
+<Warning>
+  By default, Mailpit keeps messages in a temporary database that's deleted when Mailpit stops. To keep messages across restarts, see [Keep messages after a restart](/guides/keep-messages-after-restart).
+</Warning>
+
+## Next steps
+
+- [Send email from your app](/guides/send-email-from-your-app): point Laravel, Django, Rails, Node.js, or Spring at Mailpit.
+- [Run Mailpit with Docker Compose](/guides/docker-compose) next to your app's containers.
+- [Assert email content in automated tests](/guides/assert-email-in-tests).

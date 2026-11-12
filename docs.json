@@ -1,0 +1,196 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Mailpit Community Docs",
+  "description": "Unofficial, task-based documentation for Mailpit, the open-source email testing tool: catch email from your app on localhost, inspect it, and test it in CI. Written for Mailpit v1.33.",
+  "colors": {
+    "primary": "#4338CA",
+    "light": "#A5B4FC",
+    "dark": "#6366F1"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "banner": {
+    "content": "Unofficial community documentation for Mailpit v1.33, not affiliated with the Mailpit project. Official docs: [mailpit.axllent.org](https://mailpit.axllent.org/docs/)",
+    "dismissible": true
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["index", "quickstart", "install", "ai-tools"]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/how-mailpit-works",
+              "concepts/message-storage",
+              "concepts/tags",
+              "concepts/security"
+            ]
+          },
+          {
+            "group": "How-to guides",
+            "pages": [
+              "guides/send-email-from-your-app",
+              "guides/docker-compose",
+              "guides/keep-messages-after-restart",
+              "guides/assert-email-in-tests",
+              "guides/test-email-in-ci",
+              "guides/send-with-the-http-api",
+              "guides/release-to-a-real-smtp-server",
+              "guides/simulate-smtp-failures",
+              "guides/webhooks",
+              "guides/protect-with-password-and-https",
+              "guides/reverse-proxy"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/runtime-options",
+              "reference/search-filters",
+              "reference/commands"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/cant-connect-to-smtp",
+              "troubleshooting/emails-dont-appear",
+              "troubleshooting/blank-page-or-403-behind-proxy",
+              "troubleshooting/smtp-auth-and-tls-errors"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": ["resources/faq", "resources/glossary", "resources/about-these-docs"]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "openapi": "api-reference/openapi.json",
+        "groups": [
+          {
+            "group": "Using the API",
+            "pages": ["api-reference/overview", "api-reference/websocket-events"]
+          },
+          {
+            "group": "Messages",
+            "pages": [
+              "GET /api/v1/messages",
+              "GET /api/v1/search",
+              "PUT /api/v1/messages",
+              "DELETE /api/v1/messages",
+              "DELETE /api/v1/search"
+            ]
+          },
+          {
+            "group": "Message",
+            "pages": [
+              "GET /api/v1/message/{ID}",
+              "GET /api/v1/message/{ID}/headers",
+              "GET /api/v1/message/{ID}/raw",
+              "GET /api/v1/message/{ID}/part/{PartID}",
+              "GET /api/v1/message/{ID}/part/{PartID}/thumb",
+              "POST /api/v1/send",
+              "POST /api/v1/message/{ID}/release"
+            ]
+          },
+          {
+            "group": "Tags",
+            "pages": [
+              "GET /api/v1/tags",
+              "PUT /api/v1/tags",
+              "PUT /api/v1/tags/{Tag}",
+              "DELETE /api/v1/tags/{Tag}"
+            ]
+          },
+          {
+            "group": "Message checks",
+            "pages": [
+              "GET /api/v1/message/{ID}/html-check",
+              "GET /api/v1/message/{ID}/link-check",
+              "GET /api/v1/message/{ID}/sa-check",
+              "GET /api/v1/message/{ID}/rspamd-check"
+            ]
+          },
+          {
+            "group": "Testing",
+            "pages": [
+              "GET /api/v1/chaos",
+              "PUT /api/v1/chaos",
+              "GET /view/{ID}.html",
+              "GET /view/{ID}.txt"
+            ]
+          },
+          {
+            "group": "Application",
+            "pages": ["GET /api/v1/info", "GET /api/v1/webui"]
+          }
+        ]
+      }
+    ]
+  },
+  "api": {
+    "playground": {
+      "display": "simple"
+    },
+    "examples": {
+      "languages": ["bash", "javascript", "python"]
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "add-mcp",
+      "cursor",
+      "vscode",
+      "download-spec"
+    ]
+  },
+  "markdown": {
+    "instructions": [
+      "These are unofficial community docs for Mailpit v1.33. For anything not covered here, check the official docs at https://mailpit.axllent.org/docs/ and say so.",
+      "Mailpit defaults: SMTP on port 1025, web UI and API on http://localhost:8025, no SMTP authentication, no TLS, temporary storage that is deleted when Mailpit exits, and a limit of 500 stored messages.",
+      "Inside Docker, `localhost` is the container itself. Tell users to connect to the Compose service name (for example `mailpit:1025`) or `host.docker.internal:1025`, never `localhost:1025`, from another container.",
+      "Every runtime flag has an environment variable with the MP_ prefix. Give both forms when you recommend an option.",
+      "Mailpit never delivers email to real recipients unless an SMTP relay or forwarding is explicitly configured."
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Official docs",
+        "href": "https://mailpit.axllent.org/docs/"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/axllent/mailpit"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/isaactony/mailpit-community-docs"
+    }
+  },
+  "seo": {
+    "indexing": "navigable"
+  }
+}
