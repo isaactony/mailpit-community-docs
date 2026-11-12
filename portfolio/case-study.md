@@ -54,7 +54,11 @@ The three low-confidence answers each pointed to a specific content gap: framewo
 
 Full results: [ai-question-test.md](ai-question-test.md).
 
-**After deployment:** [MCP retrieval test and `mint score` results go here.]
+**Live MCP retrieval:** After deployment, the same 10 questions went to the site's live MCP search tool. **All 10 returned an answer page in the top 3, and 7 at rank 1.** The Hookferry site scored 8 of 10 on its first live run. The difference comes from writing symptom-first titles and question-shaped FAQ entries from the start, rather than fixing them afterwards.
+
+**Live site:** https://mailpit-community-docs.mintlify.site (llms.txt with 57 described pages, custom skill.md, skill discovery, MCP server)
+
+**Agent-readiness score:** [run `mint score mailpit-community-docs.mintlify.site` after `mint login` and add it here]
 
 ## Quality checks
 
@@ -63,6 +67,7 @@ Full results: [ai-question-test.md](ai-question-test.md).
 - `mint a11y`: all colors pass, no issues in 31 pages
 - All 31 pages export cleanly to Markdown, with no raw components left
 - All code examples run against Mailpit v1.33.1
+- GitHub Actions: the **Test email examples** workflow passed on the first push, with the Node.js and Python tests green against the `axllent/mailpit:v1.33` service container ([runs](https://github.com/isaactony/mailpit-community-docs/actions))
 
 ## What this shows
 

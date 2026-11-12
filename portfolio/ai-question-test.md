@@ -56,6 +56,25 @@ One more finding in round 2: copying the Laravel snippet unchanged reproduces th
 | Low-confidence answers | 3 | 0 |
 | Made-up flags, endpoints, or features | 0 | 0 |
 
+## Round 3: retrieval test on the live MCP server
+
+After deployment, each of the 10 questions went to the site's live MCP search tool (`search_mailpit_community_docs` at `https://mailpit-community-docs.mintlify.site/mcp`), the first thing any connected AI client calls. The script is `retrieval.py`.
+
+| # | Question | Answer page rank | Top result |
+| :-- | :-- | :-- | :-- |
+| 1 | Laravel in Compose: connection error | 1 | Fix "connection refused" |
+| 2 | Emails gone after restarting containers | 2 | Fix emails that don't appear, which also covers this cause |
+| 3 | nginx sub-path `404` and `403` | 1 | Fix a blank page or 403 errors behind a reverse proxy |
+| 4 | Assert a reset email in Node.js | 1 | Assert email content in automated tests |
+| 5 | Won't start after `--smtp-auth-file` | 1 | Fix SMTP authentication and TLS errors |
+| 6 | Webhook fires for only some emails | 1 | Get a webhook for each new message |
+| 7 | Release to Gmail | 2 | FAQ, then Release messages to a real SMTP server |
+| 8 | `to:` misses a Bcc recipient | 1 | Search filter syntax |
+| 9 | Make Mailpit reject email | 2 | Fix emails that don't appear (lists Chaos), then Simulate SMTP failures |
+| 10 | Thunderbird over IMAP | 1 | FAQ |
+
+**Result:** 10 of 10 questions had an answer page in the top 3, and 7 of them at rank 1. For comparison, the Hookferry site scored 8 of 10 on its first live run, before its headings were rewritten. Here, symptom-first titles and question-shaped FAQ entries were written in from the start.
+
 ### Backlog: gaps the agent noted that didn't cause wrong answers
 
 - Publishing POP3 port `1110` in Docker isn't shown.
