@@ -1,7 +1,11 @@
 # Mailpit Community Docs
 
+Created by **[Isaac Tony](https://github.com/isaactony)**, technical writer.
+
 Unofficial, AI-ready documentation for [Mailpit](https://github.com/axllent/mailpit), the open-source email testing tool, built with [Mintlify](https://mintlify.com).
 
+> Live site: https://mailpit-community-docs.mintlify.site
+>
 > Not affiliated with the Mailpit project. The official docs are at https://mailpit.axllent.org/docs/. These docs cover Mailpit v1.33.1.
 
 ## Why these docs exist

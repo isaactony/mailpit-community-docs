@@ -4,7 +4,7 @@ description: Catch, inspect, and test email in development and CI with Mailpit, 
 license: MIT
 compatibility: Written for Mailpit v1.33. Mailpit runs as a single binary on macOS, Linux, and Windows, or as the axllent/mailpit Docker image.
 metadata:
-  author: mailpit-community-docs
+  author: Isaac Tony
   version: "1.33"
   docs: https://mailpit-community-docs.mintlify.site
   official-docs: https://mailpit.axllent.org/docs/

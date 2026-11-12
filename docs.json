@@ -17,7 +17,7 @@
     "library": "lucide"
   },
   "banner": {
-    "content": "Unofficial community documentation for Mailpit v1.33, not affiliated with the Mailpit project. Official docs: [mailpit.axllent.org](https://mailpit.axllent.org/docs/)",
+    "content": "Unofficial community documentation for Mailpit v1.33, created by [Isaac Tony](https://github.com/isaactony). Not affiliated with the Mailpit project. Official docs: [mailpit.axllent.org](https://mailpit.axllent.org/docs/)",
     "dismissible": true
   },
   "navigation": {
@@ -27,7 +27,12 @@
         "groups": [
           {
             "group": "Get started",
-            "pages": ["index", "quickstart", "install", "ai-tools"]
+            "pages": [
+              "index",
+              "quickstart",
+              "install",
+              "ai-tools"
+            ]
           },
           {
             "group": "Concepts",
@@ -73,7 +78,11 @@
           },
           {
             "group": "Resources",
-            "pages": ["resources/faq", "resources/glossary", "resources/about-these-docs"]
+            "pages": [
+              "resources/faq",
+              "resources/glossary",
+              "resources/about-these-docs"
+            ]
           }
         ]
       },
@@ -83,7 +92,10 @@
         "groups": [
           {
             "group": "Using the API",
-            "pages": ["api-reference/overview", "api-reference/websocket-events"]
+            "pages": [
+              "api-reference/overview",
+              "api-reference/websocket-events"
+            ]
           },
           {
             "group": "Messages",
@@ -136,7 +148,10 @@
           },
           {
             "group": "Application",
-            "pages": ["GET /api/v1/info", "GET /api/v1/webui"]
+            "pages": [
+              "GET /api/v1/info",
+              "GET /api/v1/webui"
+            ]
           }
         ]
       }
@@ -147,7 +162,11 @@
       "display": "simple"
     },
     "examples": {
-      "languages": ["bash", "javascript", "python"]
+      "languages": [
+        "bash",
+        "javascript",
+        "python"
+      ]
     }
   },
   "contextual": {
@@ -188,7 +207,35 @@
   "footer": {
     "socials": {
       "github": "https://github.com/isaactony/mailpit-community-docs"
-    }
+    },
+    "links": [
+      {
+        "header": "Created by",
+        "items": [
+          {
+            "label": "Isaac Tony, technical writer",
+            "href": "https://github.com/isaactony"
+          },
+          {
+            "label": "About these docs",
+            "href": "/resources/about-these-docs"
+          }
+        ]
+      },
+      {
+        "header": "Mailpit",
+        "items": [
+          {
+            "label": "Official docs",
+            "href": "https://mailpit.axllent.org/docs/"
+          },
+          {
+            "label": "Mailpit on GitHub",
+            "href": "https://github.com/axllent/mailpit"
+          }
+        ]
+      }
+    ]
   },
   "seo": {
     "indexing": "navigable"
